@@ -1,0 +1,460 @@
+
+R version 4.4.2 (2024-10-31) -- "Pile of Leaves"
+Copyright (C) 2024 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[Previously saved workspace restored]
+
+> # Combine articles (Crossref) with replication packages (migration + DataCite)
+> #
+> 
+> source(file.path(rprojroot::find_rstudio_root_file(),"pathconfig.R"),echo=FALSE)
+> source(file.path(basepath,"global-libraries.R"),echo=FALSE)
+Loading required package: devtools
+Loading required package: usethis
+Loading required package: rprojroot
+Loading required package: tictoc
+Loading required package: here
+here() starts at /home/rstudio/packages-over-time
+> source(file.path(programs,"libraries.R"), echo=FALSE)
+Loading required package: rcrossref
+Loading required package: purrr
+Loading required package: dplyr
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Loading required package: stringr
+Loading required package: tidyr
+Loading required package: jsonlite
+
+Attaching package: ‘jsonlite’
+
+The following object is masked from ‘package:purrr’:
+
+    flatten
+
+Loading required package: httr
+Loading required package: tidylog
+
+Attaching package: ‘tidylog’
+
+The following objects are masked from ‘package:tidyr’:
+
+    drop_na, fill, gather, pivot_longer, pivot_wider, replace_na,
+    separate_wider_delim, separate_wider_position,
+    separate_wider_regex, spread, uncount
+
+The following objects are masked from ‘package:dplyr’:
+
+    add_count, add_tally, anti_join, count, distinct, distinct_all,
+    distinct_at, distinct_if, filter, filter_all, filter_at, filter_if,
+    full_join, group_by, group_by_all, group_by_at, group_by_if,
+    inner_join, left_join, mutate, mutate_all, mutate_at, mutate_if,
+    relocate, rename, rename_all, rename_at, rename_if, rename_with,
+    right_join, sample_frac, sample_n, select, select_all, select_at,
+    select_if, semi_join, slice, slice_head, slice_max, slice_min,
+    slice_sample, slice_tail, summarise, summarise_all, summarise_at,
+    summarise_if, summarize, summarize_all, summarize_at, summarize_if,
+    tally, top_frac, top_n, transmute, transmute_all, transmute_at,
+    transmute_if, ungroup
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+Loading required package: readr
+Loading required package: ggplot2
+Loading required package: scales
+
+Attaching package: ‘scales’
+
+The following object is masked from ‘package:readr’:
+
+    col_factor
+
+The following object is masked from ‘package:purrr’:
+
+    discard
+
+> source(file.path(programs,"config.R"), echo=FALSE)
+> 
+> # filenames in config.R
+> 
+> # ===========================
+> # Articles: filter Crossref to research articles
+> # ===========================
+> 
+> new.df <- readRDS(crossref.raw.Rds)
+> nrow(new.df)
+[1] 19901
+> 
+> # Front matter and editorial/administrative content that is not a research article.
+> # Most of these have no authors; the title patterns catch the ones that do.
+> editorial.titles <- c("^front matter$",
++                       "^book reviews?$",
++                       "^foreword$",
++                       "^editors?['’]?s?['’]? (introduction|note)",
++                       "^report (of|by) ",
++                       ": report of ",
++                       "\\(aeastat\\).*annual report",
++                       "^minutes of ",
++                       "^recommendations for further reading$",
++                       "universal academic questionnaire",
++                       "^general information on the association",
++                       "^list of online reports",
++                       "^annotated listing",
++                       "^jel classification",
++                       "independent auditor",
++                       "^(american economic association )?committee on ",
++                       "volume \\d+,? number \\d+",
++                       "forthcoming",
++                       "corrigendum",
++                       "^erratum",
++                       "^correction to ",
++                       "^abstracts$",
++                       "^certificate of incorporation",
++                       "data and code availability policy",
++                       "^note from the aea")
+> 
+> new.df %>%
++   distinct(doi,.keep_all=TRUE) %>%
++   mutate(doi = tolower(doi),
++          title.clean = str_squish(str_remove_all(title,"<[^>]+>")),
++          no.author   = map_lgl(author, ~ is.null(.x) || length(.x)==0 ||
++                                          (is.data.frame(.x) && nrow(.x)==0)),
++          editorial   = str_detect(title.clean,
++                                   regex(paste(editorial.titles,collapse="|"),ignore_case=TRUE)),
++          # JEL book reviews have DOIs ending in .r1, .r2, ...
++          bookreview  = str_detect(doi,"\\.r\\d+$"),
++          # frontmatter DOIs end in "i"
++          frontmatter = str_sub(doi, start= -1)=="i") -> crossref.df
+distinct: removed 5,901 rows (30%), 14,000 rows remaining
+mutate: new variable 'title.clean' (character) with 11,556 unique values and 1% NA
+        new variable 'no.author' (logical) with 2 unique values and 0% NA
+        new variable 'editorial' (logical) with 3 unique values and 1% NA
+        new variable 'bookreview' (logical) with 2 unique values and 0% NA
+        new variable 'frontmatter' (logical) with 2 unique values and 0% NA
+> 
+> # How many are dropped by each criterion (not mutually exclusive)?
+> crossref.df %>%
++   summarize(total=n(),
++             not_article=sum(type!="journal-article"),
++             frontmatter=sum(frontmatter),
++             no.author=sum(no.author),
++             editorial=sum(editorial),
++             bookreview=sum(bookreview))
+summarize: now one row and 6 columns, ungrouped
+  total not_article frontmatter no.author editorial bookreview
+1 14000          79         595      2406        NA        877
+> 
+> crossref.df %>%
++   filter(type=="journal-article") %>%
++   filter(!frontmatter) %>%
++   filter(!no.author) %>%
++   filter(!editorial) %>%
++   filter(!bookreview) %>%
++   filter(!is.na(title)) %>%
++   mutate(year = as.integer(substr(published.print,1,4)),
++          # replace full journal name by short name
++          Journal = str_replace_all(container.title,
++                                    c("^The "=""," +"=" ",
++                                      "American Economic Journal: ?"="AEJ:",
++                                      "American Economic Review: ?Insights"="AER:Insights",
++                                      "American Economic Review"="AER",
++                                      "Journal of Economic Literature"="JEL",
++                                      "Journal of Economic Perspectives"="JEP",
++                                      "AEA Papers and Proceedings"="AEA P&P")),
++          Journal = if_else(Journal=="AEJ:Macroeconomics","AEJ:Macro",Journal),
++          Journal = if_else(Journal=="AEJ:Microeconomics","AEJ:Micro",Journal)) %>%
++   filter(year >= firstyear) %>%
++   select(doi,title,year,published.print,Journal,container.title,volume,issue,page) -> articles
+filter: removed 79 rows (1%), 13,921 rows remaining
+filter: removed 595 rows (4%), 13,326 rows remaining
+filter: removed 1,759 rows (13%), 11,567 rows remaining
+filter: removed 348 rows (3%), 11,219 rows remaining
+filter: removed 116 rows (1%), 11,103 rows remaining
+filter: no rows removed
+mutate: new variable 'year' (integer) with 27 unique values and 0% NA
+        new variable 'Journal' (character) with 9 unique values and 0% NA
+filter: no rows removed
+select: dropped 9 variables (issued, type, author, issn, title.clean, …)
+> 
+> nrow(articles)
+[1] 11103
+> articles %>% count(Journal)
+count: now 9 rows and 2 columns, ungrouped
+                Journal    n
+1               AEA P&P 1048
+2 AEJ:Applied Economics  781
+3   AEJ:Economic Policy  842
+4             AEJ:Macro  686
+5             AEJ:Micro  786
+6                   AER 4861
+7          AER:Insights  244
+8                   JEL  653
+9                   JEP 1202
+> 
+> saveRDS(articles, file= doi.file.Rds)
+> write_csv(articles, file= doi.file.csv)
+> 
+> # ===========================
+> # Packages
+> # ===========================
+> 
+> # Historical supplements migrated to openICPSR
+> migration <- readRDS(file.path(migrationloc,"migration_packages.Rds")) %>%
++   transmute(doi,
++             package = coalesce(str_extract(icpsr_doi,"^10\\.3886/e\\d+"),paste0("migration:",doi)),
++             source  = "migration")
+transmute: dropped 2 variables (icpsr_doi, batch)
+transmute: dropped 2 variables (icpsr_doi, batch)
+           new variable 'package' (character) with 2,772 unique values and 0% NA
+           new variable 'source' (character) with one unique value and 0% NA
+> 
+> # Deposits at openICPSR linked to AEA articles (includes most of the migrated ones)
+> datacite <- read_csv(datacite.csv) %>%
++   filter(relationType %in% c("IsSupplementTo","IsDocumentedBy")) %>%
++   filter(!is.na(icpsr_project)) %>%
++   transmute(doi=relatedIdentifier, package=icpsr_project, source="datacite") %>%
++   distinct()
+Rows: 23271 Columns: 7
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+chr  (5): datacite_doi, relationType, relatedIdentifier, level, icpsr_project
+dbl  (1): publicationYear
+dttm (1): registered
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+filter: removed 1,744 rows (7%), 21,527 rows remaining
+filter: removed 766 rows (4%), 20,761 rows remaining
+transmute: dropped 7 variables (datacite_doi, publicationYear, registered, relationType, relatedIdentifier, …)
+transmute: dropped 7 variables (datacite_doi, publicationYear, registered, relationType, relatedIdentifier, …)
+           new variable 'doi' (character) with 4,392 unique values and 0% NA
+           new variable 'package' (character) with 4,425 unique values and 0% NA
+           new variable 'source' (character) with one unique value and 0% NA
+distinct: removed 16,318 rows (79%), 4,443 rows remaining
+> 
+> # Normalized titles, for matching
+> normalize_title <- function(x) {
++   x %>%
++     str_remove_all("<[^>]+>") %>%
++     iconv(to="ASCII//TRANSLIT") %>%
++     tolower() %>%
++     str_replace_all("[^a-z0-9]+"," ") %>%
++     str_squish()
++ }
+> 
+> # Article titles that are long enough and unique enough to be matched on
+> articles.titles <- articles %>%
++   mutate(title.norm = normalize_title(title)) %>%
++   add_count(title.norm,name="n.title") %>%
++   filter(n.title == 1, nchar(title.norm) >= 20) %>%
++   select(doi,year,title.norm)
+mutate: new variable 'title.norm' (character) with 11,009 unique values and 0% NA
+add_count: new variable 'n.title' (integer) with 5 unique values and 0% NA
+filter: removed 401 rows (4%), 10,702 rows remaining
+select: dropped 8 variables (title, published.print, Journal, container.title, volume, …)
+> 
+> # Articles cite their own replication package in their references.
+> # Keep references to openICPSR deposits whose text contains the article's own title
+> # (articles may also cite other deposits, e.g., data from another paper).
+> references <- readRDS(icpsr.refs.Rds) %>%
++   inner_join(articles.titles,by="doi") %>%
++   mutate(ref.norm = normalize_title(ref_unstructured)) %>%
++   filter(str_detect(ref.norm,fixed(str_sub(title.norm,1,60)))) %>%
++   transmute(doi, package=str_extract(icpsr_doi,"^10\\.3886/e\\d+"), source="reference") %>%
++   distinct()
+inner_join: added 2 columns (year, title.norm)
+            > rows only in x               (   48)
+            > rows only in articles.titles (9,200)
+            > matched rows                  1,651
+            >                              =======
+            > rows total                    1,651
+mutate: new variable 'ref.norm' (character) with 1,650 unique values and 0% NA
+filter: removed 326 rows (20%), 1,325 rows remaining
+transmute: dropped 6 variables (ref_doi, ref_unstructured, icpsr_doi, year, title.norm, …)
+transmute: dropped 6 variables (ref_doi, ref_unstructured, icpsr_doi, year, title.norm, …)
+           new variable 'package' (character) with 1,320 unique values and 0% NA
+           new variable 'source' (character) with one unique value and 0% NA
+distinct: no rows removed
+> 
+> # Deposits titled "Data and Code for: <article title>" (and similar), matched on
+> # the normalized title, and deposited no earlier than 3 years before publication
+> titles <- read_csv(datacite.titles.csv) %>%
++   mutate(title.norm = normalize_title(article_title)) %>%
++   distinct(icpsr_project,title.norm,publicationYear) %>%
++   inner_join(articles.titles,by="title.norm",relationship="many-to-many") %>%
++   filter(is.na(publicationYear) | between(publicationYear-year,-3,2)) %>%
++   transmute(doi, package=icpsr_project, source="title") %>%
++   distinct()
+Rows: 13991 Columns: 6
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+chr (5): datacite_doi, title, level, icpsr_project, article_title
+dbl (1): publicationYear
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+mutate: new variable 'title.norm' (character) with 6,645 unique values and <1% NA
+distinct: removed 7,152 rows (51%), 6,839 rows remaining
+inner_join: added 2 columns (doi, year)
+            > rows only in x               (1,245)
+            > rows only in articles.titles (5,224)
+            > matched rows                  5,594
+            >                              =======
+            > rows total                    5,594
+filter: removed 69 rows (1%), 5,525 rows remaining
+transmute: dropped 4 variables (icpsr_project, title.norm, publicationYear, year)
+transmute: dropped 4 variables (icpsr_project, title.norm, publicationYear, year)
+           new variable 'package' (character) with 5,467 unique values and 0% NA
+           new variable 'source' (character) with one unique value and 0% NA
+distinct: removed 58 rows (1%), 5,467 rows remaining
+> 
+> all.packages <- bind_rows(migration,datacite,references,titles) %>%
++   group_by(doi,package) %>%
++   summarize(source = paste(sort(unique(source)),collapse="+"), .groups="drop")
+group_by: 2 grouping variables (doi, package)
+summarize: now 6,247 rows and 3 columns, ungrouped
+> 
+> all.packages %>% count(source,sort=TRUE)
+count: now 10 rows and 2 columns, ungrouped
+# A tibble: 10 × 2
+   source                       n
+   <chr>                    <int>
+ 1 datacite+migration+title  2494
+ 2 datacite+title            1238
+ 3 reference+title            717
+ 4 title                      673
+ 5 datacite+reference+title   345
+ 6 datacite                   239
+ 7 migration                  221
+ 8 reference                  193
+ 9 datacite+reference          70
+10 datacite+migration          57
+> 
+> # Attach article information. A package linked to several articles (rare)
+> # is counted once, with its earliest article.
+> packages <- all.packages %>%
++   inner_join(articles %>% select(doi,year,Journal),by="doi") %>%
++   arrange(package,year,doi) %>%
++   distinct(package,.keep_all=TRUE)
+select: dropped 6 variables (title, published.print, container.title, volume, issue, …)
+inner_join: added 2 columns (year, Journal)
+            > rows only in x                         (   14)
+            > rows only in articles %>% select(doi.. (5,181)
+            > matched rows                            6,233
+            >                                        =======
+            > rows total                              6,233
+distinct: removed 31 rows (<1%), 6,202 rows remaining
+> 
+> # How many package-article links do not match a research article in scope?
+> all.packages %>% anti_join(articles,by="doi") %>% nrow()
+anti_join: added no columns
+           > rows only in x            14
+           > rows only in articles (5,181)
+           > matched rows          (6,233)
+           >                       =======
+           > rows total                14
+[1] 14
+> nrow(packages)
+[1] 6202
+> 
+> saveRDS(packages,file=packages.Rds)
+> write_csv(packages,file=packages.csv)
+> 
+> # ===========================
+> # Tabulate by year and by journal x year
+> # ===========================
+> 
+> articles.flagged <- articles %>%
++   left_join(packages %>% count(doi,name="n_packages"),by="doi") %>%
++   mutate(n_packages = coalesce(n_packages,0L))
+count: now 5,902 rows and 2 columns, ungrouped
+left_join: added one column (n_packages)
+           > rows only in x                           5,201
+           > rows only in packages %>% count(doi,.. (     0)
+           > matched rows                             5,902
+           >                                        ========
+           > rows total                              11,103
+mutate: changed 5,201 values (47%) of 'n_packages' (5,201 fewer NAs)
+> 
+> tabulate <- function(df, ...) {
++   df %>%
++     group_by(...) %>%
++     summarize(articles              = n(),
++               articles_with_package = sum(n_packages>0),
++               packages              = sum(n_packages),   # distinct openICPSR projects
++               .groups = "drop") %>%
++     mutate(pct_with_package = round(100*articles_with_package/articles,1))
++ }
+> 
+> by.year    <- tabulate(articles.flagged, year)
+group_by: one grouping variable (year)
+summarize: now 27 rows and 4 columns, ungrouped
+mutate: new variable 'pct_with_package' (double) with 26 unique values and 0% NA
+> by.journal <- tabulate(articles.flagged, Journal, year)
+group_by: 2 grouping variables (Journal, year)
+summarize: now 170 rows and 5 columns, ungrouped
+mutate: new variable 'pct_with_package' (double) with 117 unique values and 0% NA
+> 
+> by.year %>% print(n=Inf)
+# A tibble: 27 × 5
+    year articles articles_with_package packages pct_with_package
+   <int>    <int>                 <int>    <int>            <dbl>
+ 1  2000      258                     1        1              0.4
+ 2  2001      260                     0        0              0  
+ 3  2002      261                     3        3              1.1
+ 4  2003      260                     0        0              0  
+ 5  2004      247                    16       20              6.5
+ 6  2005      248                    57       58             23  
+ 7  2006      280                    57       58             20.4
+ 8  2007      287                    58       59             20.2
+ 9  2008      254                    55       56             21.7
+10  2009      367                   144      145             39.2
+11  2010      433                   179      183             41.3
+12  2011      443                   215      220             48.5
+13  2012      444                   221      227             49.8
+14  2013      431                   235      240             54.5
+15  2014      472                   331      339             70.1
+16  2015      463                   315      323             68  
+17  2016      471                   296      304             62.8
+18  2017      497                   305      316             61.4
+19  2018      466                   330      348             70.8
+20  2019      497                   371      431             74.6
+21  2020      491                   339      456             69  
+22  2021      527                   392      400             74.4
+23  2022      592                   395      405             66.7
+24  2023      570                   427      435             74.9
+25  2024      570                   434      441             76.1
+26  2025      535                   400      405             74.8
+27  2026      479                   326      329             68.1
+> 
+> write_csv(by.year,   file=by_year.csv)
+> write_csv(by.journal,file=by_journal.csv)
+> 
+> proc.time()
+   user  system elapsed 
+  3.751   0.922   3.588 

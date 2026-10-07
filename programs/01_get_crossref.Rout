@@ -1,0 +1,233 @@
+
+R version 4.4.2 (2024-10-31) -- "Pile of Leaves"
+Copyright (C) 2024 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[Previously saved workspace restored]
+
+> # Getting all articles published in AEA journals
+> # Code derived from aea-cumulative-summary/programs/11_get_crossref.R
+> # NOTE: THIS REQUIRES R 4.2.0 and newer packages!
+> #
+> 
+> source(file.path(rprojroot::find_rstudio_root_file(),"pathconfig.R"),echo=FALSE)
+> source(file.path(basepath,"global-libraries.R"),echo=FALSE)
+Loading required package: devtools
+Loading required package: usethis
+Loading required package: rprojroot
+Loading required package: tictoc
+Loading required package: here
+here() starts at /home/rstudio/packages-over-time
+> source(file.path(programs,"libraries.R"), echo=FALSE)
+Loading required package: rcrossref
+Loading required package: purrr
+Loading required package: dplyr
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Loading required package: stringr
+Loading required package: tidyr
+Loading required package: jsonlite
+
+Attaching package: ‘jsonlite’
+
+The following object is masked from ‘package:purrr’:
+
+    flatten
+
+Loading required package: httr
+Loading required package: tidylog
+
+Attaching package: ‘tidylog’
+
+The following objects are masked from ‘package:tidyr’:
+
+    drop_na, fill, gather, pivot_longer, pivot_wider, replace_na,
+    separate_wider_delim, separate_wider_position,
+    separate_wider_regex, spread, uncount
+
+The following objects are masked from ‘package:dplyr’:
+
+    add_count, add_tally, anti_join, count, distinct, distinct_all,
+    distinct_at, distinct_if, filter, filter_all, filter_at, filter_if,
+    full_join, group_by, group_by_all, group_by_at, group_by_if,
+    inner_join, left_join, mutate, mutate_all, mutate_at, mutate_if,
+    relocate, rename, rename_all, rename_at, rename_if, rename_with,
+    right_join, sample_frac, sample_n, select, select_all, select_at,
+    select_if, semi_join, slice, slice_head, slice_max, slice_min,
+    slice_sample, slice_tail, summarise, summarise_all, summarise_at,
+    summarise_if, summarize, summarize_all, summarize_at, summarize_if,
+    tally, top_frac, top_n, transmute, transmute_all, transmute_at,
+    transmute_if, ungroup
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+Loading required package: readr
+Loading required package: ggplot2
+Loading required package: scales
+
+Attaching package: ‘scales’
+
+The following object is masked from ‘package:readr’:
+
+    col_factor
+
+The following object is masked from ‘package:purrr’:
+
+    discard
+
+> source(file.path(programs,"config.R"), echo=FALSE)
+> 
+> library(rcrossref)
+> 
+> # filenames in config.R
+> 
+> 
+> # Each journal has a ISSN
+> if (!file.exists(issns.file)) {
++   issns <- data.frame(matrix(ncol=3,nrow=18))
++   names(issns) <- c("journal","issn","lastdate")
++   tmp.date <- substr(firstpubday,1,7)
++ # Both print and online ISSNs are needed: individual works carry only one of them,
++ # and which one varies by journal and year. Duplicates are removed by DOI later.
++ issns[1,] <- c("American Economic Journal: Applied Economics","1945-7790",tmp.date)
++ issns[2,] <- c("American Economic Journal: Applied Economics","1945-7782",tmp.date)
++ issns[3,] <- c("American Economic Journal: Economic Policy","1945-774X",tmp.date)
++ issns[4,] <- c("American Economic Journal: Economic Policy","1945-7731",tmp.date)
++ issns[5,] <- c("American Economic Journal: Macroeconomics", "1945-7715",tmp.date)
++ issns[6,] <- c("American Economic Journal: Macroeconomics", "1945-7707",tmp.date)
++ issns[7,] <- c("American Economic Journal: Microeconomics", "1945-7685",tmp.date)
++ issns[8,] <- c("American Economic Journal: Microeconomics", "1945-7669",tmp.date)
++ issns[9,] <- c("The American Economic Review","1944-7981",tmp.date)
++ issns[10,] <- c("The American Economic Review","0002-8282",tmp.date)  # print ISSN is needed!
++ issns[11,] <- c("Journal of Economic Literature","2328-8175",tmp.date)
++ issns[12,] <- c("Journal of Economic Literature","0022-0515",tmp.date)
++ issns[13,] <- c("Journal of Economic Perspectives","1944-7965",tmp.date)
++ issns[14,] <- c("Journal of Economic Perspectives","0895-3309",tmp.date)
++ issns[15,] <- c("American Economic Review: Insights","2640-2068",tmp.date)
++ issns[16,] <- c("American Economic Review: Insights","2640-205X",tmp.date)
++ issns[17,] <- c("AEA Papers and Proceedings","2574-0768",tmp.date)  # since 2018; earlier P&P are AER May issues
++ issns[18,] <- c("AEA Papers and Proceedings","2574-0776",tmp.date)
++ 
++   saveRDS(issns %>% filter(!is.na(journal)), file= issns.file)
++ } else {
++   warning(paste("Reusing file: ",issns.file))
++ }
+filter: no rows removed
+> 
+> issns <- readRDS(file = issns.file)
+> 
+> if ( download_crossref == TRUE ) {
++   warning("Deleting existing raw Crossref file to force re-download.")
++   if ( file.exists(crossref.raw.Rds) ) {
++     file.remove(crossref.raw.Rds)
++   }
++ }
+Warning message:
+Deleting existing raw Crossref file to force re-download. 
+> 
+> 
+> if (file.exists(crossref.raw.Rds) ) {
++   warning(paste("Re-using file:",crossref.raw.Rds))
++ } else{
++   new.df <- NA
++   for ( x in 1:nrow(issns) ) {
++     message(paste0("Processing ",issns[x,"journal"]," (",issns[x,"issn"],")"))
++     new <- cr_journals(issn=issns[x,"issn"], works=TRUE,
++                        filter=c(from_pub_date=issns[x,"lastdate"]),
++                        select=c("DOI","title","published-print","issued","volume","issue","page",
++                                 "container-title","author","type","reference"),
++                        .progress="text",
++                        cursor = "*",
++                        # default cursor_max is 5000, which truncates AER
++                        cursor_max = 100000)
++     if ( x == 1 ) {
++       new.df <- as.data.frame(new$data)
++       new.df$issn = issns[x,"issn"]
++     } else {
++       tmp.df <- as.data.frame(new$data)
++       if ( nrow(tmp.df) > 0 ) {
++         tmp.df$issn = issns[x,"issn"]
++         new.df <- bind_rows(new.df,tmp.df)
++       } else {
++         warning(paste0("Did not find records for ISSN=",issns[x,"issn"]))
++       }
++       rm(tmp.df)
++     }
++   }
++   # AEA articles cite their own replication package in the references.
++   # Keep only references to openICPSR deposits (10.3886/E...), then drop the
++   # (large) reference column.
++   icpsr.refs <- new.df %>%
++     select(doi,reference) %>%
++     distinct(doi,.keep_all=TRUE) %>%
++     mutate(reference = map(reference, function(r) {
++       if ( !is.data.frame(r) || nrow(r)==0 ) return(NULL)
++       tibble(ref_doi          = if ("DOI" %in% names(r)) r$DOI else NA_character_,
++              ref_unstructured = if ("unstructured" %in% names(r)) r$unstructured else NA_character_)
++     })) %>%
++     unnest(reference) %>%
++     mutate(icpsr_doi = tolower(coalesce(str_extract(ref_doi,regex("10\\.3886/e\\d+[^\\s]*",ignore_case=TRUE)),
++                                         str_extract(ref_unstructured,regex("10\\.3886/e\\d+[^\\s]*",ignore_case=TRUE))))) %>%
++     filter(!is.na(icpsr_doi)) %>%
++     mutate(doi = tolower(doi))
++   nrow(icpsr.refs)
++   saveRDS(icpsr.refs, file= icpsr.refs.Rds)
++ 
++   new.df <- new.df %>% select(-reference)
++   saveRDS(new.df, file= crossref.raw.Rds)
++   rm(new)
++ }
+Processing American Economic Journal: Applied Economics (1945-7790)
+Processing American Economic Journal: Applied Economics (1945-7782)
+Processing American Economic Journal: Economic Policy (1945-774X)
+Processing American Economic Journal: Economic Policy (1945-7731)
+Processing American Economic Journal: Macroeconomics (1945-7715)
+Processing American Economic Journal: Macroeconomics (1945-7707)
+Processing American Economic Journal: Microeconomics (1945-7685)
+Processing American Economic Journal: Microeconomics (1945-7669)
+Processing The American Economic Review (1944-7981)
+Processing The American Economic Review (0002-8282)
+Processing Journal of Economic Literature (2328-8175)
+Processing Journal of Economic Literature (0022-0515)
+Processing Journal of Economic Perspectives (1944-7965)
+Processing Journal of Economic Perspectives (0895-3309)
+Processing American Economic Review: Insights (2640-2068)
+Processing American Economic Review: Insights (2640-205X)
+Processing AEA Papers and Proceedings (2574-0768)
+Processing AEA Papers and Proceedings (2574-0776)
+select: dropped 10 variables (container.title, published.print, issue, issued, page, …)
+distinct: removed 5,901 rows (30%), 14,000 rows remaining
+mutate: changed 11,649 values (83%) of 'reference' (0 new NAs)
+mutate: new variable 'icpsr_doi' (character) with 1,649 unique values and >99% NA
+filter: removed 364,956 rows (>99%), 1,699 rows remaining
+mutate: no changes
+select: dropped one variable (reference)
+> 
+> proc.time()
+   user  system elapsed 
+172.177   1.538 422.091 

@@ -1,0 +1,275 @@
+
+R version 4.4.2 (2024-10-31) -- "Pile of Leaves"
+Copyright (C) 2024 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[Previously saved workspace restored]
+
+> # Getting openICPSR deposits that are AEA replication packages, from DataCite
+> # Two complementary queries:
+> #  1. deposits with a relatedIdentifier pointing to an AEA article DOI
+> #     (set for the migrated supplements and for deposits up to about 2020)
+> #  2. deposits whose title follows the AEA template ("Data and Code for: <article title>",
+> #     "Replication data for: ...", ...). Recent deposits often lack the link in (1);
+> #     they are matched to articles by title in 04_combine.R
+> #
+> 
+> source(file.path(rprojroot::find_rstudio_root_file(),"pathconfig.R"),echo=FALSE)
+> source(file.path(basepath,"global-libraries.R"),echo=FALSE)
+Loading required package: devtools
+Loading required package: usethis
+Loading required package: rprojroot
+Loading required package: tictoc
+Loading required package: here
+here() starts at /home/rstudio/packages-over-time
+> source(file.path(programs,"libraries.R"), echo=FALSE)
+Loading required package: rcrossref
+Loading required package: purrr
+Loading required package: dplyr
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Loading required package: stringr
+Loading required package: tidyr
+Loading required package: jsonlite
+
+Attaching package: ‘jsonlite’
+
+The following object is masked from ‘package:purrr’:
+
+    flatten
+
+Loading required package: httr
+Loading required package: tidylog
+
+Attaching package: ‘tidylog’
+
+The following objects are masked from ‘package:tidyr’:
+
+    drop_na, fill, gather, pivot_longer, pivot_wider, replace_na,
+    separate_wider_delim, separate_wider_position,
+    separate_wider_regex, spread, uncount
+
+The following objects are masked from ‘package:dplyr’:
+
+    add_count, add_tally, anti_join, count, distinct, distinct_all,
+    distinct_at, distinct_if, filter, filter_all, filter_at, filter_if,
+    full_join, group_by, group_by_all, group_by_at, group_by_if,
+    inner_join, left_join, mutate, mutate_all, mutate_at, mutate_if,
+    relocate, rename, rename_all, rename_at, rename_if, rename_with,
+    right_join, sample_frac, sample_n, select, select_all, select_at,
+    select_if, semi_join, slice, slice_head, slice_max, slice_min,
+    slice_sample, slice_tail, summarise, summarise_all, summarise_at,
+    summarise_if, summarize, summarize_all, summarize_at, summarize_if,
+    tally, top_frac, top_n, transmute, transmute_all, transmute_at,
+    transmute_if, ungroup
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+Loading required package: readr
+Loading required package: ggplot2
+Loading required package: scales
+
+Attaching package: ‘scales’
+
+The following object is masked from ‘package:readr’:
+
+    col_factor
+
+The following object is masked from ‘package:purrr’:
+
+    discard
+
+> source(file.path(programs,"config.R"), echo=FALSE)
+> 
+> # filenames in config.R
+> 
+> # cursor-based pagination through all matching records
+> fetch_datacite <- function(query) {
++   url <- modify_url(datacite.api,
++                     query=list(`client-id`=datacite.client,
++                                query=query,
++                                `page[size]`=1000,
++                                `page[cursor]`=1,
++                                `fields[dois]`="doi,titles,publicationYear,registered,relatedIdentifiers"))
++   pages <- list()
++   while ( !is.null(url) ) {
++     message(paste0("Fetching page ",length(pages)+1))
++     resp <- RETRY("GET",url,times=5)
++     stop_for_status(resp)
++     js <- fromJSON(content(resp,as="text",encoding="UTF-8"),simplifyVector=FALSE)
++     if ( length(js$data) == 0 ) break
++     pages[[length(pages)+1]] <- js$data
++     url <- js$links[["next"]]
++   }
++   records <- unlist(pages,recursive=FALSE)
++   message(paste0("Retrieved ",length(records)," records"))
++   records
++ }
+> 
+> if ( download_datacite == TRUE ) {
++   warning("Deleting existing DataCite files to force re-download.")
++   for ( f in c(datacite.raw.Rds,datacite.titles.raw.Rds) ) {
++     if ( file.exists(f) ) file.remove(f)
++   }
++ }
+Warning message:
+Deleting existing DataCite files to force re-download. 
+> 
+> if (file.exists(datacite.raw.Rds) ) {
++   warning(paste("Re-using file:",datacite.raw.Rds))
++ } else {
++   records <- fetch_datacite(paste0("relatedIdentifiers.relatedIdentifier:",doi_prefix,"*"))
++   saveRDS(records,file=datacite.raw.Rds)
++ }
+Fetching page 1
+Fetching page 2
+Fetching page 3
+Fetching page 4
+Fetching page 5
+Fetching page 6
+Fetching page 7
+Fetching page 8
+Fetching page 9
+Fetching page 10
+Fetching page 11
+Fetching page 12
+Retrieved 11527 records
+> 
+> if (file.exists(datacite.titles.raw.Rds) ) {
++   warning(paste("Re-using file:",datacite.titles.raw.Rds))
++ } else {
++   records <- fetch_datacite(paste(paste0('titles.title:"',datacite.title.templates,'"'),collapse=" OR "))
++   saveRDS(records,file=datacite.titles.raw.Rds)
++ }
+Fetching page 1
+Fetching page 2
+Fetching page 3
+Fetching page 4
+Fetching page 5
+Fetching page 6
+Fetching page 7
+Fetching page 8
+Fetching page 9
+Fetching page 10
+Fetching page 11
+Fetching page 12
+Fetching page 13
+Fetching page 14
+Fetching page 15
+Fetching page 16
+Fetching page 17
+Fetching page 18
+Retrieved 17042 records
+> 
+> # Deposits are registered at several levels: the project (10.3886/E123456),
+> # its versions (10.3886/E123456V1, V2, ...), and sometimes individual files
+> # (10.3886/E123456V1-98765). A package is the project, regardless of version.
+> add_level <- function(df) {
++   df %>%
++     mutate(level = case_when(str_detect(datacite_doi,"^10\\.3886/e\\d+$")        ~ "project",
++                              str_detect(datacite_doi,"^10\\.3886/e\\d+v\\d+$")   ~ "version",
++                              TRUE                                                ~ "other"),
++            icpsr_project = str_extract(datacite_doi,"^10\\.3886/e\\d+"))
++ }
+> 
+> # --- (1) one row per (deposit DOI, related AEA DOI)
+> 
+> records <- readRDS(datacite.raw.Rds)
+> 
+> datacite.links <- map_dfr(records, function(r) {
++   rel <- r$attributes$relatedIdentifiers
++   if ( length(rel) == 0 ) return(NULL)
++   tibble(datacite_doi      = tolower(r$attributes$doi),
++          publicationYear   = as.integer(r$attributes$publicationYear %||% NA),
++          registered        = r$attributes$registered %||% NA_character_,
++          relationType      = map_chr(rel, ~ .x$relationType %||% NA_character_),
++          relatedIdentifier = map_chr(rel, ~ .x$relatedIdentifier %||% NA_character_))
++ }) %>%
++   mutate(relatedIdentifier = tolower(str_remove(relatedIdentifier,"^https?://(dx\\.)?doi\\.org/"))) %>%
++   filter(str_starts(relatedIdentifier,paste0(doi_prefix,"/"))) %>%
++   add_level()
+mutate: changed 7,732 values (6%) of 'relatedIdentifier' (0 new NAs)
+filter: removed 103,585 rows (82%), 23,271 rows remaining
+mutate: new variable 'level' (character) with 3 unique values and 0% NA
+        new variable 'icpsr_project' (character) with 4,426 unique values and 10% NA
+> 
+> # what relations are there? IsCitedBy are ICPSR studies (10.3886/ICPSR...)
+> # used as data by AEA articles, not replication packages
+> datacite.links %>% count(relationType,sort=TRUE)
+count: now 5 rows and 2 columns, ungrouped
+# A tibble: 5 × 2
+  relationType         n
+  <chr>            <int>
+1 IsDocumentedBy   11372
+2 IsSupplementTo   10155
+3 IsCitedBy         1740
+4 Cites                2
+5 IsSupplementedBy     2
+> datacite.links %>% count(level)
+count: now 3 rows and 2 columns, ungrouped
+# A tibble: 3 × 2
+  level       n
+  <chr>   <int>
+1 other    7820
+2 project  7614
+3 version  7837
+> 
+> write_csv(datacite.links,file=datacite.csv)
+> 
+> # --- (2) one row per deposit DOI with an AEA-template title
+> 
+> records <- readRDS(datacite.titles.raw.Rds)
+> 
+> datacite.titles <- map_dfr(records, function(r) {
++   tibble(datacite_doi    = tolower(r$attributes$doi),
++          publicationYear = as.integer(r$attributes$publicationYear %||% NA),
++          title           = r$attributes$titles[[1]]$title %||% NA_character_)
++ }) %>%
++   add_level() %>%
++   filter(level != "other") %>%
++   # the article title is whatever follows the template prefix
++   mutate(article_title = str_remove(title,regex(paste0("^.*?(",paste(datacite.title.templates,collapse="|"),")\\s*:?\\s*"),
++                                                 ignore_case=TRUE)))
+mutate: new variable 'level' (character) with 3 unique values and 0% NA
+        new variable 'icpsr_project' (character) with 6,661 unique values and 1% NA
+filter: removed 3,051 rows (18%), 13,991 rows remaining
+mutate: new variable 'article_title' (character) with 6,655 unique values and 0% NA
+> 
+> datacite.titles %>% count(level)
+count: now 2 rows and 2 columns, ungrouped
+# A tibble: 2 × 2
+  level       n
+  <chr>   <int>
+1 project  6635
+2 version  7356
+> 
+> write_csv(datacite.titles,file=datacite.titles.csv)
+> 
+> proc.time()
+   user  system elapsed 
+ 21.552   0.902 222.182 

@@ -1,0 +1,229 @@
+
+R version 4.4.2 (2024-10-31) -- "Pile of Leaves"
+Copyright (C) 2024 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[Previously saved workspace restored]
+
+> # Figures: replication packages over time, overall and by journal
+> # Total research articles are shown as a faint benchmark
+> #
+> 
+> source(file.path(rprojroot::find_rstudio_root_file(),"pathconfig.R"),echo=FALSE)
+> source(file.path(basepath,"global-libraries.R"),echo=FALSE)
+Loading required package: devtools
+Loading required package: usethis
+Loading required package: rprojroot
+Loading required package: tictoc
+Loading required package: here
+here() starts at /home/rstudio/packages-over-time
+> source(file.path(programs,"libraries.R"), echo=FALSE)
+Loading required package: rcrossref
+Loading required package: purrr
+Loading required package: dplyr
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Loading required package: stringr
+Loading required package: tidyr
+Loading required package: jsonlite
+
+Attaching package: ‘jsonlite’
+
+The following object is masked from ‘package:purrr’:
+
+    flatten
+
+Loading required package: httr
+Loading required package: tidylog
+
+Attaching package: ‘tidylog’
+
+The following objects are masked from ‘package:tidyr’:
+
+    drop_na, fill, gather, pivot_longer, pivot_wider, replace_na,
+    separate_wider_delim, separate_wider_position,
+    separate_wider_regex, spread, uncount
+
+The following objects are masked from ‘package:dplyr’:
+
+    add_count, add_tally, anti_join, count, distinct, distinct_all,
+    distinct_at, distinct_if, filter, filter_all, filter_at, filter_if,
+    full_join, group_by, group_by_all, group_by_at, group_by_if,
+    inner_join, left_join, mutate, mutate_all, mutate_at, mutate_if,
+    relocate, rename, rename_all, rename_at, rename_if, rename_with,
+    right_join, sample_frac, sample_n, select, select_all, select_at,
+    select_if, semi_join, slice, slice_head, slice_max, slice_min,
+    slice_sample, slice_tail, summarise, summarise_all, summarise_at,
+    summarise_if, summarize, summarize_all, summarize_at, summarize_if,
+    tally, top_frac, top_n, transmute, transmute_all, transmute_at,
+    transmute_if, ungroup
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+Loading required package: readr
+Loading required package: ggplot2
+Loading required package: scales
+
+Attaching package: ‘scales’
+
+The following object is masked from ‘package:readr’:
+
+    col_factor
+
+The following object is masked from ‘package:purrr’:
+
+    discard
+
+> source(file.path(programs,"config.R"), echo=FALSE)
+> 
+> # filenames in config.R
+> 
+> by.year    <- read_csv(by_year.csv)    %>% filter(between(year,firstyear,lastyear))
+Rows: 27 Columns: 5
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+dbl (5): year, articles, articles_with_package, packages, pct_with_package
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+filter: removed one row (4%), 26 rows remaining
+> by.journal <- read_csv(by_journal.csv) %>% filter(between(year,firstyear,lastyear))
+Rows: 170 Columns: 6
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+chr (1): Journal
+dbl (5): year, articles, articles_with_package, packages, pct_with_package
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+filter: removed 9 rows (5%), 161 rows remaining
+> 
+> journal.order <- c("AER","AER:Insights","AEA P&P",
++                    "AEJ:Applied Economics","AEJ:Economic Policy","AEJ:Macro","AEJ:Micro",
++                    "JEL","JEP")
+> by.journal <- by.journal %>% mutate(Journal=factor(Journal,levels=journal.order))
+mutate: converted 'Journal' from character to factor (0 new NA)
+> 
+> col.packages  <- "#2F6BAD"
+> col.benchmark <- "grey75"
+> 
+> caption.text <- paste0("Research articles: Crossref, excluding front matter, book reviews, and editorial/administrative notes.\n",
++                        "Replication packages: AEA Data and Code Repository at openICPSR (DataCite links and titles, article references, migrated supplements).\n",
++                        "By year of print publication, ",firstyear,"-",lastyear,".")
+> 
+> theme_packages <- function() {
++   theme_classic() +
++     theme(axis.line = element_line(linewidth=0),
++           axis.ticks.y = element_blank(),
++           panel.grid.major.y = element_line(colour="grey92",linewidth=0.3),
++           legend.position = "top",
++           legend.justification = "left",
++           legend.title = element_blank(),
++           plot.caption = element_text(hjust=0,colour="grey40",size=7),
++           plot.title.position = "plot",
++           plot.caption.position = "plot")
++ }
+> 
+> # long format, so that the legend identifies both series
+> to_long <- function(df) {
++   df %>%
++     select(any_of("Journal"),year,articles,articles_with_package) %>%
++     pivot_longer(c(articles,articles_with_package),names_to="series",values_to="n") %>%
++     mutate(series=factor(series,levels=c("articles","articles_with_package"),
++                          labels=c("All research articles","Articles with a replication package")))
++ }
+> 
+> fill.scale <- scale_fill_manual(values=c("All research articles"=col.benchmark,
++                                          "Articles with a replication package"=col.packages))
+> alpha.scale <- scale_alpha_manual(values=c("All research articles"=0.45,
++                                            "Articles with a replication package"=1),
++                                   guide="none")
+> 
+> # ===========================
+> # Overall
+> # ===========================
+> 
+> by.year %>%
++   to_long() %>%
++   ggplot(aes(year,n,fill=series,alpha=series)) +
++     # benchmark drawn first and wider, packages in front
++     geom_col(data=~ filter(.x,series=="All research articles"),width=0.85) +
++     geom_col(data=~ filter(.x,series!="All research articles"),width=0.55) +
++     fill.scale + alpha.scale +
++     scale_x_continuous(breaks=seq(firstyear,lastyear,5),expand=expansion(add=0.6)) +
++     scale_y_continuous(labels=label_comma(),expand=expansion(mult=c(0,0.05))) +
++     labs(title="Replication packages in AEA journals, by year",
++          x=element_blank(),y=element_blank(),caption=caption.text) +
++     theme_packages() -> fig.packages.year
+select: dropped 2 variables (packages, pct_with_package)
+pivot_longer: reorganized (articles, articles_with_package) into (series, n) [was 26x3, now 52x3]
+mutate: converted 'series' from character to factor (0 new NA)
+> 
+> ggsave(file.path(Figures,"figure_packages_by_year.png"),fig.packages.year,width=8,height=5,dpi=300)
+filter: removed 26 rows (50%), 26 rows remaining
+filter: removed 26 rows (50%), 26 rows remaining
+> ggsave(file.path(Figures,"figure_packages_by_year.pdf"),fig.packages.year,width=8,height=5)
+filter: removed 26 rows (50%), 26 rows remaining
+filter: removed 26 rows (50%), 26 rows remaining
+> 
+> # ===========================
+> # By journal
+> # ===========================
+> 
+> by.journal %>%
++   to_long() %>%
++   ggplot(aes(year,n,fill=series,alpha=series)) +
++     geom_col(data=~ filter(.x,series=="All research articles"),width=0.85) +
++     geom_col(data=~ filter(.x,series!="All research articles"),width=0.55) +
++     facet_wrap(~ Journal,ncol=3,scales="free_y") +
++     fill.scale + alpha.scale +
++     scale_x_continuous(limits=c(firstyear-0.5,lastyear+0.5),breaks=seq(firstyear,lastyear,10),
++                        expand=expansion(add=0.2)) +
++     scale_y_continuous(labels=label_comma(),expand=expansion(mult=c(0,0.05))) +
++     labs(title="Replication packages in AEA journals, by journal and year",
++          subtitle="Vertical scales differ across panels. AEA P&P is published separately since 2018; earlier, it was the May issue of the AER.",
++          x=element_blank(),y=element_blank(),caption=caption.text) +
++     theme_packages() +
++     theme(strip.background = element_blank(),
++           strip.text = element_text(face="bold",hjust=0),
++           plot.subtitle = element_text(colour="grey30",size=8.5),
++           panel.spacing.x = unit(1,"lines")) -> fig.packages.journal
+select: dropped 2 variables (packages, pct_with_package)
+pivot_longer: reorganized (articles, articles_with_package) into (series, n) [was 161x4, now 322x4]
+mutate: converted 'series' from character to factor (0 new NA)
+> 
+> ggsave(file.path(Figures,"figure_packages_by_journal.png"),fig.packages.journal,width=10,height=8,dpi=300)
+filter: removed 161 rows (50%), 161 rows remaining
+filter: removed 161 rows (50%), 161 rows remaining
+> ggsave(file.path(Figures,"figure_packages_by_journal.pdf"),fig.packages.journal,width=10,height=8)
+filter: removed 161 rows (50%), 161 rows remaining
+filter: removed 161 rows (50%), 161 rows remaining
+> 
+> proc.time()
+   user  system elapsed 
+  3.840   0.845   3.647 

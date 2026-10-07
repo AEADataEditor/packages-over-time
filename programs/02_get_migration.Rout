@@ -1,0 +1,180 @@
+
+R version 4.4.2 (2024-10-31) -- "Pile of Leaves"
+Copyright (C) 2024 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[Previously saved workspace restored]
+
+> # Getting the historical supplements migrated from the AEA website to openICPSR
+> # Data from https://github.com/AEADataEditor/aea-supplement-migration
+> #
+> 
+> source(file.path(rprojroot::find_rstudio_root_file(),"pathconfig.R"),echo=FALSE)
+> source(file.path(basepath,"global-libraries.R"),echo=FALSE)
+Loading required package: devtools
+Loading required package: usethis
+Loading required package: rprojroot
+Loading required package: tictoc
+Loading required package: here
+here() starts at /home/rstudio/packages-over-time
+> source(file.path(programs,"libraries.R"), echo=FALSE)
+Loading required package: rcrossref
+Loading required package: purrr
+Loading required package: dplyr
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Loading required package: stringr
+Loading required package: tidyr
+Loading required package: jsonlite
+
+Attaching package: ‘jsonlite’
+
+The following object is masked from ‘package:purrr’:
+
+    flatten
+
+Loading required package: httr
+Loading required package: tidylog
+
+Attaching package: ‘tidylog’
+
+The following objects are masked from ‘package:tidyr’:
+
+    drop_na, fill, gather, pivot_longer, pivot_wider, replace_na,
+    separate_wider_delim, separate_wider_position,
+    separate_wider_regex, spread, uncount
+
+The following objects are masked from ‘package:dplyr’:
+
+    add_count, add_tally, anti_join, count, distinct, distinct_all,
+    distinct_at, distinct_if, filter, filter_all, filter_at, filter_if,
+    full_join, group_by, group_by_all, group_by_at, group_by_if,
+    inner_join, left_join, mutate, mutate_all, mutate_at, mutate_if,
+    relocate, rename, rename_all, rename_at, rename_if, rename_with,
+    right_join, sample_frac, sample_n, select, select_all, select_at,
+    select_if, semi_join, slice, slice_head, slice_max, slice_min,
+    slice_sample, slice_tail, summarise, summarise_all, summarise_at,
+    summarise_if, summarize, summarize_all, summarize_at, summarize_if,
+    tally, top_frac, top_n, transmute, transmute_all, transmute_at,
+    transmute_if, ungroup
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+Loading required package: readr
+Loading required package: ggplot2
+Loading required package: scales
+
+Attaching package: ‘scales’
+
+The following object is masked from ‘package:readr’:
+
+    col_factor
+
+The following object is masked from ‘package:purrr’:
+
+    discard
+
+> source(file.path(programs,"config.R"), echo=FALSE)
+> 
+> # filenames in config.R
+> 
+> for ( f in migration.files ) {
++   dest <- file.path(migrationloc,basename(f))
++   if ( download_migration == TRUE | !file.exists(dest) ) {
++     message(paste0("Downloading ",f))
++     download.file(paste(migration.base,f,sep="/"),destfile=dest,mode="wb")
++   } else {
++     warning(paste("Re-using file:",dest))
++   }
++ }
+Downloading generated/table.aea.icpsr.mapping.csv
+trying URL 'https://raw.githubusercontent.com/AEADataEditor/aea-supplement-migration/master/data/generated/table.aea.icpsr.mapping.csv'
+Content type 'text/plain; charset=utf-8' length 309359 bytes (302 KB)
+==================================================
+downloaded 302 KB
+
+Downloading acquired/aea_icpsr_final_batch_20210930.csv
+trying URL 'https://raw.githubusercontent.com/AEADataEditor/aea-supplement-migration/master/data/acquired/aea_icpsr_final_batch_20210930.csv'
+Content type 'text/plain; charset=utf-8' length 13824 bytes (13 KB)
+==================================================
+downloaded 13 KB
+
+> 
+> # First batch (October 2019): article DOI -> openICPSR DOI
+> mapping <- read_csv(file.path(migrationloc,"table.aea.icpsr.mapping.csv")) %>%
++   select(doi,icpsr_doi)
+New names:
+• `` -> `...1`
+Rows: 2562 Columns: 4
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+chr (3): doi, icpsr_doi, title
+dbl (1): ...1
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+select: dropped 2 variables (...1, title)
+> nrow(mapping)
+[1] 2562
+> 
+> # Final batch (September 2021): large supplements migrated later; no openICPSR DOI recorded
+> final.batch <- read_csv(file.path(migrationloc,"aea_icpsr_final_batch_20210930.csv")) %>%
++   transmute(doi=aa_DOI,icpsr_doi=NA_character_)
+Rows: 221 Columns: 4
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+chr (3): aa_DOI, aa_URL, datafile_name
+dbl (1): aa_ID
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+transmute: dropped 4 variables (aa_ID, aa_DOI, aa_URL, datafile_name)
+transmute: dropped 4 variables (aa_ID, aa_DOI, aa_URL, datafile_name)
+           new variable 'doi' (character) with 221 unique values and 0% NA
+           new variable 'icpsr_doi' (character) with one unique value and 100% NA
+> nrow(final.batch)
+[1] 221
+> 
+> migration <- bind_rows(mutate(mapping,batch="2019-10"),
++                        mutate(final.batch,batch="2021-09")) %>%
++   filter(!is.na(doi)) %>%
++   mutate(doi=tolower(doi),icpsr_doi=tolower(icpsr_doi)) %>%
++   distinct(doi,.keep_all=TRUE)
+mutate: new variable 'batch' (character) with one unique value and 0% NA
+mutate: new variable 'batch' (character) with one unique value and 0% NA
+filter: removed 11 rows (<1%), 2,772 rows remaining
+mutate: changed 2,551 values (92%) of 'icpsr_doi' (0 new NAs)
+distinct: no rows removed
+> 
+> nrow(migration)
+[1] 2772
+> saveRDS(migration,file=file.path(migrationloc,"migration_packages.Rds"))
+> 
+> proc.time()
+   user  system elapsed 
+  2.605   0.860   2.958 
