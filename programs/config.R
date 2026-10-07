@@ -53,3 +53,5 @@ packages.Rds      <- file.path(Outputs,"packages_by_article.Rds")
 packages.csv      <- file.path(Outputs,"packages_by_article.csv")
 by_year.csv       <- file.path(Outputs,"packages_by_year.csv")
 by_journal.csv    <- file.path(Outputs,"packages_by_journal_year.csv")
+# P&P articles printed in the May AER (to 2017) attributed to the P&P
+by_journal_pp.csv <- file.path(Outputs,"packages_by_journal_year_pp.csv")

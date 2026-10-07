@@ -85,7 +85,14 @@ crossref.df %>%
          Journal = if_else(Journal=="AEJ:Macroeconomics","AEJ:Macro",Journal),
          Journal = if_else(Journal=="AEJ:Microeconomics","AEJ:Micro",Journal)) %>%
   filter(year >= firstyear) %>%
-  select(doi,title,year,published.print,Journal,container.title,volume,issue,page) -> articles
+  # The May issue of the AER was the Papers & Proceedings until 2017 (volume 107);
+  # since 2018 the P&P is a separate journal. Identify those articles by volume and issue.
+  mutate(vol.n = suppressWarnings(as.integer(volume)),
+         pp_in_aer = Journal=="AER" & !is.na(vol.n) &
+                     ((between(vol.n,90,100) & issue=="2") |
+                      (between(vol.n,101,103) & issue=="3") |
+                      (between(vol.n,104,107) & issue=="5"))) %>%
+  select(doi,title,year,published.print,Journal,container.title,volume,issue,page,pp_in_aer) -> articles
 
 nrow(articles)
 articles %>% count(Journal)
@@ -188,7 +195,13 @@ tabulate <- function(df, ...) {
 by.year    <- tabulate(articles.flagged, year)
 by.journal <- tabulate(articles.flagged, Journal, year)
 
+# Same, with the P&P articles that were printed in the May AER attributed to the P&P
+by.journal.pp <- articles.flagged %>%
+  mutate(Journal = if_else(pp_in_aer,"AEA P&P",Journal)) %>%
+  tabulate(Journal,year,pp_in_aer)
+
 by.year %>% print(n=Inf)
 
 write_csv(by.year,   file=by_year.csv)
 write_csv(by.journal,file=by_journal.csv)
+write_csv(by.journal.pp,file=by_journal_pp.csv)
