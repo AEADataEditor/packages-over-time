@@ -345,3 +345,75 @@ fig_highlight <- function(j) {
 }
 
 fig.highlight <- lapply(journal.order,fig_highlight)
+
+# ---------------------------
+# 4. Diagnostic: mean delay by year, by journal
+# By publication year (the years analyzed above), and by submission year (all mapped cohorts).
+# Submission years still being published miss their slowest papers, so their means are too low:
+# those with coverage below 95% are drawn hollow. Grey: the other journals.
+# ---------------------------
+
+by_year <- function(df, yvar) {
+  df %>% group_by(Journal,year={{ yvar }}) %>%
+    summarize(n=n(),mean=mean(delay_months),median=median(delay_months),
+              se=sd(delay_months)/sqrt(n),.groups="drop") %>%
+    mutate(lo=mean-qt(0.975,pmax(n-1,1))*se,hi=mean+qt(0.975,pmax(n-1,1))*se)
+}
+
+delay.pub <- by_year(delay %>% mutate(Journal=as.character(Journal)),year) %>%
+  mutate(view="publication year",complete=TRUE)
+delay.sub <- by_year(ms %>% filter(mapped),sub_year) %>%
+  left_join(cohorts %>% select(Journal,year=sub_year,coverage),by=c("Journal","year")) %>%
+  mutate(view="submission year",complete=coverage >= 0.95) %>%
+  select(-coverage)
+
+bind_rows(delay.pub,delay.sub) %>%
+  select(view,Journal,year,n,mean,lo,hi,median,complete) %>%
+  mutate(across(c(mean,lo,hi,median),~ round(.x,1))) %>%
+  write_csv(delay.by.year.csv)
+
+# the method part of the caption (no points, densities, or median shifts in these figures)
+caption.method <- paste0(sub("\nDelays fall on a grid.*$","",caption.delay),
+                         "\nExcluded: AEA P&P, JEL, JEP (no submission-based numbering).")
+
+fig_by_year <- function(df, xlab, title, subtitle, note, file, policy.line=TRUE) {
+  df <- df %>% mutate(Journal=factor(Journal,levels=journal.order))
+  # every journal's series, drawn in grey in all other panels
+  others <- tidyr::crossing(panel=factor(journal.order,levels=journal.order),df %>% rename(series=Journal)) %>%
+    filter(panel!=series) %>% rename(Journal=panel)
+  p <- ggplot(df,aes(year,mean)) +
+    { if (policy.line) geom_vline(xintercept=delay.policy.year-0.5,colour="grey40",linetype="dashed",linewidth=0.4) } +
+    geom_line(data=others,aes(group=series),colour="grey82",linewidth=0.4) +
+    geom_linerange(aes(ymin=lo,ymax=hi),colour=col.single,linewidth=0.5,alpha=0.6) +
+    geom_line(colour=col.single,linewidth=0.6) +
+    geom_point(aes(shape=complete),colour=col.single,fill="white",size=2) +
+    geom_text(aes(y=0,label=n),size=2.3,colour="grey45",vjust=0) +
+    scale_shape_manual(values=c("TRUE"=16,"FALSE"=21),guide="none") +
+    facet_wrap(~ Journal,ncol=3) +
+    scale_x_continuous(breaks=seq(2010,2030,2)) +
+    scale_y_continuous(limits=c(0,NA),breaks=seq(0,96,12),labels=function(x) paste0(x/12," yr"),
+                       expand=expansion(mult=c(0,0.05))) +
+    labs(title=title,subtitle=subtitle,x=xlab,y="Mean delay",
+         caption=paste0(note,caption.method)) +
+    theme_delay() +
+    theme(axis.text.y=element_text(),axis.line.y=element_line(),axis.ticks.y=element_line(),
+          panel.grid.major.y=element_line(colour="grey92",linewidth=0.3),
+          panel.grid.major.x=element_blank())
+  ggsave(file.path(Figures,paste0(file,".png")),p,width=10,height=6.5,dpi=300)
+  ggsave(file.path(Figures,paste0(file,".pdf")),p,width=10,height=6.5)
+  p
+}
+
+fig.pubyear <- fig_by_year(delay.pub,"Year of publication",
+  "Mean delay from submission to publication, by year of publication",
+  paste0("Mean and 95% CI; numbers: articles. Dashed line: ",delay.policy.year," AEA-wide policy. Grey: other journals.\n",
+         "Only publication years with at least ",percent(delay.min.pubyear)," of articles from mapped submission years."),
+  "",
+  "figure_delay_by_pubyear")
+
+fig.subyear <- fig_by_year(delay.sub,"Year of submission",
+  "Mean delay from submission to publication, by year of submission",
+  paste0("Mean and 95% CI; numbers: articles. Grey: other journals. Hollow: submission years with less than 95% of their\n",
+         "published articles observed; recent years miss their slowest papers, so their means are too low."),
+  paste0("Papers accepted after mid-2019 were reviewed by the Data Editor; given the delays, that includes many papers submitted from about 2016 on.\n"),
+  "figure_delay_by_subyear",policy.line=FALSE)

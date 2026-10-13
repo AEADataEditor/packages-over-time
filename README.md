@@ -60,6 +60,7 @@ Before and after the 2019 AEA-wide policy is defined by year of publication. `ou
 
 - `outputs/figures/figure_delay_by_journal.*`: the delay distribution for each journal (points: articles; line: kernel density).
 - `outputs/figures/figure_delay_policy.*`: before and after 2019, by journal. Blue: before; orange: after. Journals with no significant shift (Holm-adjusted Wilcoxon, 5%) are drawn in muted tints.
+- `outputs/figures/figure_delay_by_pubyear.*`, `figure_delay_by_subyear.*`: diagnostic, mean delay (95% CI) by year of publication and by year of submission, each journal against the others in grey (`outputs/delay_by_year.csv`). Recent submission years miss their slowest papers (hollow points).
 - `outputs/figures/figure_delay_{aer,aer_insights,aej_*}.*`: one figure per journal, the journal in color against all other journals in grey, before (top) and after (bottom) the policy.
 
 ## Running
