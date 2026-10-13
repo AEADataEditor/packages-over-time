@@ -11,6 +11,7 @@ Counts, by year of print publication, the research articles in AEA journals and 
 3. `03_get_datacite.R`: openICPSR deposits in DataCite that link to AEA articles or follow the AEA title template.
 4. `04_combine.R`: restricts Crossref to research articles (dropping front matter, book reviews, and editorial/administrative items), matches packages to articles by migration mapping, DataCite link, reference list, or title, and tabulates by year and journal.
 5. `05_figures.R`: the figures.
+6. `06_delay.R`: the delay between submission and publication, from manuscript-number DOIs (see below).
 
 Settings (first and last year, whether to re-download) are in `programs/config.R`.
 
@@ -48,6 +49,18 @@ The `source` column in `outputs/packages_by_article.csv` records which methods m
 - `outputs/figures/figure_share_{aer,aej,others,pp}.*`: share of articles with a package by year, 1999 on, for the AER (without the May P&P), the AEJs, AER:Insights/JEL/JEP, and the P&P. Dashed lines mark the policy changes (2005 AER data policy, 2009 AEJs launched, 2019 AEA-wide policy); red lines are the pooled share in each of the four periods (`outputs/packages_by_period.csv`). The same dashed lines are on the count figures.
 - `outputs/packages_by_year.csv`, `outputs/packages_by_journal_year.csv`: counts of articles, articles with a package, and packages.
 - `outputs/packages_by_article.csv`: one row per package, with the matching method(s) in `source`.
+
+## Delay from submission to publication
+
+Since 2015 (AER, AEJs; AER:Insights from its start in 2019), DOIs are based on the manuscript number: `10.1257/aer.20151234` was submitted in 2015, as manuscript 1234 of that year (the counter restarts each year). The number has no date, but increases with submissions: within a submission year, the quartiles of the numbers of all eventually published manuscripts define the submission quarter, dated at its middle. Delay runs from there to the middle of the month of the print issue, so it is precise to about plus or minus 1.5 months.
+
+The quartiles are only meaningful when (nearly) all published manuscripts of a submission year are observed. Submission years that also published before the switch to manuscript-number DOIs, or that are still being published, are not mapped: `outputs/delay_cohorts.csv` gives each submission year's estimated coverage (from the distribution of publication year minus submission year), and years with at least 80% are used. Only publication years with at least 90% of their articles from mapped submission years are analyzed (`outputs/delay_pubyears.csv`), so that long delays are not cut off. The AEA P&P (numbered by conference program), JEL, and JEP (commissioned; numbers not restarted each year) are excluded. Thresholds are in `programs/config.R`.
+
+Before and after the 2019 AEA-wide policy is defined by year of publication. `outputs/delay_tests.csv` has, for each journal, the medians and means, the Hodges-Lehmann shift with its 95% confidence interval, the difference in means with a Welch 95% confidence interval, and Wilcoxon rank-sum and Kolmogorov-Smirnov p-values (raw and Holm-adjusted across journals), for 2019 and, as a robustness check, 2020 (papers accepted after the Data Editor started in mid-2019 are mostly published from 2020 on). AER:Insights has no articles before the policy. For the AEJs, delays fall on a grid of 3 months (quarter midpoints, quarterly issues), so the Hodges-Lehmann shift and its interval are multiples of 3 months and need not be centered; the difference in means is a continuous alternative, and the figures show both. Article-level delays are in `outputs/delay_articles.csv`.
+
+- `outputs/figures/figure_delay_by_journal.*`: the delay distribution for each journal (points: articles; line: kernel density).
+- `outputs/figures/figure_delay_policy.*`: before and after 2019, by journal. Blue: before; orange: after. Journals with no significant shift (Holm-adjusted Wilcoxon, 5%) are drawn in muted tints.
+- `outputs/figures/figure_delay_{aer,aer_insights,aej_*}.*`: one figure per journal, the journal in color against all other journals in grey, before (top) and after (bottom) the policy.
 
 ## Running
 

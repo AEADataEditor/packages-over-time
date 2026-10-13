@@ -1,0 +1,818 @@
+
+R version 4.4.2 (2024-10-31) -- "Pile of Leaves"
+Copyright (C) 2024 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[Previously saved workspace restored]
+
+> # Delay between submission and publication, from manuscript-number DOIs
+> #
+> # Since about 2015, AEA DOIs are based on the manuscript number: 10.1257/aer.20151234 was submitted
+> # in 2015, as manuscript 1234 of that year. The sequence number has no date, but it increases with
+> # submissions. Within a submission year (cohort), the quartiles of the sequence numbers of all
+> # eventually published manuscripts define the submission quarter. This is only possible for cohorts
+> # whose published manuscripts are (nearly) all observed: cohorts that also published before the
+> # switch to manuscript-number DOIs (left), or that are still being published (right), are not mapped.
+> #
+> # Delay: from the middle of the submission quarter to the middle of the month of print publication.
+> # Pre/post: published before or from delay.policy.year (2019 AEA-wide policy, Data Editor review).
+> 
+> source(file.path(rprojroot::find_rstudio_root_file(),"pathconfig.R"),echo=FALSE)
+> source(file.path(basepath,"global-libraries.R"),echo=FALSE)
+Loading required package: devtools
+Loading required package: usethis
+Loading required package: rprojroot
+Loading required package: tictoc
+Loading required package: here
+here() starts at /home/rstudio/packages-over-time
+> source(file.path(programs,"libraries.R"), echo=FALSE)
+Loading required package: rcrossref
+Loading required package: purrr
+Loading required package: dplyr
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Loading required package: stringr
+Loading required package: tidyr
+Loading required package: jsonlite
+
+Attaching package: ‘jsonlite’
+
+The following object is masked from ‘package:purrr’:
+
+    flatten
+
+Loading required package: httr
+Loading required package: tidylog
+
+Attaching package: ‘tidylog’
+
+The following objects are masked from ‘package:tidyr’:
+
+    drop_na, fill, gather, pivot_longer, pivot_wider, replace_na,
+    separate_wider_delim, separate_wider_position,
+    separate_wider_regex, spread, uncount
+
+The following objects are masked from ‘package:dplyr’:
+
+    add_count, add_tally, anti_join, count, distinct, distinct_all,
+    distinct_at, distinct_if, filter, filter_all, filter_at, filter_if,
+    full_join, group_by, group_by_all, group_by_at, group_by_if,
+    inner_join, left_join, mutate, mutate_all, mutate_at, mutate_if,
+    relocate, rename, rename_all, rename_at, rename_if, rename_with,
+    right_join, sample_frac, sample_n, select, select_all, select_at,
+    select_if, semi_join, slice, slice_head, slice_max, slice_min,
+    slice_sample, slice_tail, summarise, summarise_all, summarise_at,
+    summarise_if, summarize, summarize_all, summarize_at, summarize_if,
+    tally, top_frac, top_n, transmute, transmute_all, transmute_at,
+    transmute_if, ungroup
+
+The following object is masked from ‘package:stats’:
+
+    filter
+
+Loading required package: readr
+Loading required package: ggplot2
+Loading required package: scales
+
+Attaching package: ‘scales’
+
+The following object is masked from ‘package:readr’:
+
+    col_factor
+
+The following object is masked from ‘package:purrr’:
+
+    discard
+
+Loading required package: ggpattern
+> source(file.path(programs,"config.R"), echo=FALSE)
+> 
+> journal.order <- unname(delay.prefixes)
+> 
+> # ===========================
+> # Articles with manuscript-number DOIs
+> # ===========================
+> 
+> pub.dates <- read_csv(doi.file.csv,show_col_types=FALSE) %>%
++   distinct(doi,.keep_all=TRUE) %>%
++   select(doi,published.print)
+distinct: no rows removed
+select: dropped 8 variables (title, year, Journal, container.title, volume, …)
+> 
+> articles <- read_csv(article.db.csv,show_col_types=FALSE) %>%
++   filter(year <= lastyear) %>%
++   left_join(pub.dates,by="doi") %>%
++   mutate(m      = str_match(doi,"^10\\.1257/([a-z]+)\\.(\\d{4})(\\d{4})$"),
++          prefix = m[,2],
++          sub_year = as.integer(m[,3]),
++          seq    = as.integer(m[,4]),
++          # print month (Crossref print dates are the first of the month); year corrected in 04_combine.R
++          pub_month = as.integer(substr(published.print,6,7))) %>%
++   select(-m)
+filter: removed 479 rows (4%), 10,855 rows remaining
+left_join: added one column (published.print)
+           > rows only in x               0
+           > rows only in pub.dates (   479)
+           > matched rows            10,855
+           >                        ========
+           > rows total              10,855
+mutate: new variable 'm' (character) with 19,300 unique values and 56% NA
+        new variable 'prefix' (character) with 10 unique values and 56% NA
+        new variable 'sub_year' (integer) with 19 unique values and 56% NA
+        new variable 'seq' (integer) with 1,520 unique values and 56% NA
+        new variable 'pub_month' (integer) with 12 unique values and 0% NA
+select: dropped one variable (m)
+> 
+> # Journals with manuscript-number DOIs, by journal: the first publication year with them.
+> # Earlier articles of the same journal have volume-based DOIs (left truncation of cohorts),
+> # except for journals that started with manuscript-number DOIs (AER:Insights).
+> ms <- articles %>%
++   filter(prefix %in% names(delay.prefixes), Journal %in% delay.prefixes,
++          # a few malformed DOIs (e.g., aer.15000001) are not manuscript numbers
++          between(sub_year,2000,year))
+filter: removed 7,279 rows (67%), 3,576 rows remaining
+> 
+> first.ms <- ms %>% group_by(Journal) %>%
++   summarize(first_ms_year=min(year),.groups="drop") %>%
++   left_join(articles %>% filter(Journal %in% delay.prefixes) %>%
++               group_by(Journal) %>% summarize(first_year=min(year),.groups="drop"),
++             by="Journal") %>%
++   # left truncation only if the journal published (with volume DOIs) before
++   mutate(left_bound=if_else(first_year < first_ms_year,first_ms_year,NA_integer_))
+group_by: one grouping variable (Journal)
+summarize: now 6 rows and 2 columns, ungrouped
+filter: removed 4,692 rows (43%), 6,163 rows remaining
+group_by: one grouping variable (Journal)
+summarize: now 6 rows and 2 columns, ungrouped
+left_join: added one column (first_year)
+           > rows only in x                          0
+           > rows only in articles %>% filter(Jou.. (0)
+           > matched rows                            6
+           >                                        ===
+           > rows total                              6
+mutate: new variable 'left_bound' (double) with 2 unique values and 17% NA
+> first.ms
+# A tibble: 6 × 4
+  Journal               first_ms_year first_year left_bound
+  <chr>                         <dbl>      <dbl>      <dbl>
+1 AEJ:Applied Economics          2015       2009       2015
+2 AEJ:Economic Policy            2015       2009       2015
+3 AEJ:Macro                      2015       2009       2015
+4 AEJ:Micro                      2015       2009       2015
+5 AER                            2015       1999       2015
+6 AER:Insights                   2019       2019         NA
+> 
+> # ===========================
+> # Coverage of submission cohorts
+> # Lag distribution (publication year - submission year), from cohorts observed for all lags
+> # 0 to delay.max.lag (lags beyond are pooled); a cohort's coverage is the probability mass of
+> # the lags at which its articles are observed.
+> # ===========================
+> 
+> ms <- ms %>% left_join(first.ms %>% select(Journal,left_bound),by="Journal") %>%
++   mutate(lag=pmin(year-sub_year,delay.max.lag))
+select: dropped 2 variables (first_ms_year, first_year)
+left_join: added one column (left_bound)
+           > rows only in x                              0
+           > rows only in first.ms %>% select(Jou.. (    0)
+           > matched rows                            3,576
+           >                                        =======
+           > rows total                              3,576
+mutate: new variable 'lag' (double) with 8 unique values and 0% NA
+> 
+> lag.dist <- ms %>%
++   filter(is.na(left_bound) | sub_year >= left_bound,
++          sub_year + delay.max.lag <= lastyear) %>%
++   count(Journal,lag) %>%
++   group_by(Journal) %>% mutate(p=n/sum(n)) %>% ungroup() %>%
++   complete(Journal,lag=0:delay.max.lag,fill=list(n=0L,p=0))
+filter: removed 2,268 rows (63%), 1,308 rows remaining
+count: now 39 rows and 3 columns, ungrouped
+group_by: one grouping variable (Journal)
+mutate (grouped): new variable 'p' (double) with 34 unique values and 0% NA
+ungroup: no grouping variables remain
+> 
+> cohorts <- ms %>% count(Journal,sub_year,name="articles") %>%
++   left_join(first.ms %>% select(Journal,left_bound),by="Journal") %>%
++   rowwise() %>%
++   mutate(coverage = {
++            lo <- if (is.na(left_bound)) 0 else max(0L,left_bound - sub_year)
++            hi <- lastyear - sub_year
++            lags <- lag.dist[lag.dist$Journal==Journal,]
++            # the pooled lag delay.max.lag+ counts only if the cohort is observed that long
++            sum(lags$p[lags$lag >= lo & lags$lag <= min(hi,delay.max.lag)])
++          }) %>%
++   ungroup() %>%
++   mutate(mapped = coverage >= delay.min.coverage & articles >= delay.min.cohort)
+count: now 80 rows and 3 columns, ungrouped
+select: dropped 2 variables (first_ms_year, first_year)
+left_join: added one column (left_bound)
+           > rows only in x                           0
+           > rows only in first.ms %>% select(Jou.. ( 0)
+           > matched rows                            80
+           >                                        ====
+           > rows total                              80
+mutate: new variable 'coverage' (double) with 50 unique values and 0% NA
+ungroup: no grouping variables remain
+mutate: new variable 'mapped' (logical) with 2 unique values and 0% NA
+> 
+> cohorts %>% print(n=Inf)
+# A tibble: 80 × 6
+   Journal               sub_year articles left_bound coverage mapped
+   <chr>                    <int>    <int>      <dbl>    <dbl> <lgl> 
+ 1 AEJ:Applied Economics     2012        3       2015  0.266   FALSE 
+ 2 AEJ:Applied Economics     2013       26       2015  0.783   FALSE 
+ 3 AEJ:Applied Economics     2014       33       2015  1       TRUE  
+ 4 AEJ:Applied Economics     2015       51       2015  1       TRUE  
+ 5 AEJ:Applied Economics     2016       47       2015  1       TRUE  
+ 6 AEJ:Applied Economics     2017       59       2015  1       TRUE  
+ 7 AEJ:Applied Economics     2018       50       2015  1       TRUE  
+ 8 AEJ:Applied Economics     2019       47       2015  0.995   TRUE  
+ 9 AEJ:Applied Economics     2020       51       2015  0.990   TRUE  
+10 AEJ:Applied Economics     2021       64       2015  0.986   TRUE  
+11 AEJ:Applied Economics     2022       50       2015  0.937   TRUE  
+12 AEJ:Applied Economics     2023       26       2015  0.734   FALSE 
+13 AEJ:Applied Economics     2024        1       2015  0.217   FALSE 
+14 AEJ:Economic Policy       2011        1       2015  0.137   FALSE 
+15 AEJ:Economic Policy       2012       16       2015  0.398   FALSE 
+16 AEJ:Economic Policy       2013       39       2015  0.867   TRUE  
+17 AEJ:Economic Policy       2014       41       2015  1       TRUE  
+18 AEJ:Economic Policy       2015       64       2015  1       TRUE  
+19 AEJ:Economic Policy       2016       42       2015  1       TRUE  
+20 AEJ:Economic Policy       2017       59       2015  1       TRUE  
+21 AEJ:Economic Policy       2018       61       2015  1       TRUE  
+22 AEJ:Economic Policy       2019       48       2015  0.996   TRUE  
+23 AEJ:Economic Policy       2020       81       2015  0.991   TRUE  
+24 AEJ:Economic Policy       2021       54       2015  0.978   TRUE  
+25 AEJ:Economic Policy       2022       57       2015  0.863   TRUE  
+26 AEJ:Economic Policy       2023       32       2015  0.602   FALSE 
+27 AEJ:Economic Policy       2024        3       2015  0.133   FALSE 
+28 AEJ:Macro                 2011        2       2015  0.228   FALSE 
+29 AEJ:Macro                 2012       10       2015  0.533   FALSE 
+30 AEJ:Macro                 2013       30       2015  0.911   TRUE  
+31 AEJ:Macro                 2014       33       2015  1       TRUE  
+32 AEJ:Macro                 2015       42       2015  1       TRUE  
+33 AEJ:Macro                 2016       44       2015  1       TRUE  
+34 AEJ:Macro                 2017       38       2015  1       TRUE  
+35 AEJ:Macro                 2018       56       2015  1       TRUE  
+36 AEJ:Macro                 2019       44       2015  0.989   TRUE  
+37 AEJ:Macro                 2020       58       2015  0.967   TRUE  
+38 AEJ:Macro                 2021       48       2015  0.922   TRUE  
+39 AEJ:Macro                 2022       41       2015  0.772   FALSE 
+40 AEJ:Macro                 2023        6       2015  0.467   FALSE 
+41 AEJ:Macro                 2024        1       2015  0.0889  FALSE 
+42 AEJ:Micro                 2010        2       2015  0.0345  FALSE 
+43 AEJ:Micro                 2011        2       2015  0.108   FALSE 
+44 AEJ:Micro                 2012        6       2015  0.394   FALSE 
+45 AEJ:Micro                 2013       38       2015  0.862   TRUE  
+46 AEJ:Micro                 2014       40       2015  0.995   TRUE  
+47 AEJ:Micro                 2015       48       2015  1       TRUE  
+48 AEJ:Micro                 2016       50       2015  1       TRUE  
+49 AEJ:Micro                 2017       47       2015  1       TRUE  
+50 AEJ:Micro                 2018       58       2015  1       TRUE  
+51 AEJ:Micro                 2019       57       2015  0.995   TRUE  
+52 AEJ:Micro                 2020       73       2015  0.990   TRUE  
+53 AEJ:Micro                 2021       50       2015  0.966   TRUE  
+54 AEJ:Micro                 2022       45       2015  0.892   TRUE  
+55 AEJ:Micro                 2023       23       2015  0.606   FALSE 
+56 AEJ:Micro                 2024       10       2015  0.138   FALSE 
+57 AER                       2008        1       2015  0.00862 FALSE 
+58 AER                       2010        4       2015  0.0582  FALSE 
+59 AER                       2011       19       2015  0.136   FALSE 
+60 AER                       2012       50       2015  0.349   FALSE 
+61 AER                       2013       98       2015  0.765   FALSE 
+62 AER                       2014      106       2015  0.983   TRUE  
+63 AER                       2015      124       2015  1       TRUE  
+64 AER                       2016      111       2015  1       TRUE  
+65 AER                       2017      110       2015  1       TRUE  
+66 AER                       2018      119       2015  1       TRUE  
+67 AER                       2019      109       2015  0.991   TRUE  
+68 AER                       2020      113       2015  0.968   TRUE  
+69 AER                       2021      105       2015  0.942   TRUE  
+70 AER                       2022       86       2015  0.864   TRUE  
+71 AER                       2023       77       2015  0.651   FALSE 
+72 AER                       2024       16       2015  0.235   FALSE 
+73 AER:Insights              2017        2         NA  1       FALSE 
+74 AER:Insights              2018       26         NA  1       TRUE  
+75 AER:Insights              2019       31         NA  1       TRUE  
+76 AER:Insights              2020       38         NA  1       TRUE  
+77 AER:Insights              2021       34         NA  1       TRUE  
+78 AER:Insights              2022       32         NA  1       TRUE  
+79 AER:Insights              2023       37         NA  1       TRUE  
+80 AER:Insights              2024       20         NA  0.786   FALSE 
+> write_csv(cohorts,delay.cohorts.csv)
+> 
+> # ===========================
+> # Submission quarter and delay
+> # ===========================
+> 
+> ms <- ms %>%
++   left_join(cohorts %>% select(Journal,sub_year,mapped),by=c("Journal","sub_year")) %>%
++   group_by(Journal,sub_year) %>%
++   mutate(sub_quarter=if_else(mapped,ntile(seq,4),NA_integer_)) %>%
++   ungroup() %>%
++   mutate(sub_time   = sub_year + (sub_quarter-0.5)/4,
++          pub_time   = year + (pub_month-0.5)/12,
++          delay_months = 12*(pub_time - sub_time))
+select: dropped 3 variables (articles, left_bound, coverage)
+left_join: added one column (mapped)
+           > rows only in x                              0
+           > rows only in cohorts %>% select(Jour.. (    0)
+           > matched rows                            3,576
+           >                                        =======
+           > rows total                              3,576
+group_by: 2 grouping variables (Journal, sub_year)
+mutate (grouped): new variable 'sub_quarter' (integer) with 5 unique values and 14% NA
+ungroup: no grouping variables remain
+mutate: new variable 'sub_time' (double) with 45 unique values and 14% NA
+        new variable 'pub_time' (double) with 132 unique values and 0% NA
+        new variable 'delay_months' (double) with 79 unique values and 14% NA
+> 
+> # Publication years: analyzed only if (nearly) all of their articles come from mapped cohorts
+> pubyears <- ms %>% group_by(Journal,year) %>%
++   summarize(articles=n(),mapped=sum(mapped),share_mapped=mapped/articles,.groups="drop") %>%
++   mutate(analyzed = share_mapped >= delay.min.pubyear)
+group_by: 2 grouping variables (Journal, year)
+summarize: now 62 rows and 5 columns, ungrouped
+mutate: new variable 'analyzed' (logical) with 2 unique values and 0% NA
+> pubyears %>% print(n=Inf)
+# A tibble: 62 × 6
+   Journal                year articles mapped share_mapped analyzed
+   <chr>                 <dbl>    <int>  <int>        <dbl> <lgl>   
+ 1 AEJ:Applied Economics  2015       35     14        0.4   FALSE   
+ 2 AEJ:Applied Economics  2016       37     32        0.865 FALSE   
+ 3 AEJ:Applied Economics  2017       42     41        0.976 TRUE    
+ 4 AEJ:Applied Economics  2018       46     44        0.957 TRUE    
+ 5 AEJ:Applied Economics  2019       46     46        1     TRUE    
+ 6 AEJ:Applied Economics  2020       43     43        1     TRUE    
+ 7 AEJ:Applied Economics  2021       37     37        1     TRUE    
+ 8 AEJ:Applied Economics  2022       58     58        1     TRUE    
+ 9 AEJ:Applied Economics  2023       56     56        1     TRUE    
+10 AEJ:Applied Economics  2024       64     61        0.953 TRUE    
+11 AEJ:Applied Economics  2025       44     20        0.455 FALSE   
+12 AEJ:Economic Policy    2015       46     31        0.674 FALSE   
+13 AEJ:Economic Policy    2016       39     37        0.949 TRUE    
+14 AEJ:Economic Policy    2017       51     51        1     TRUE    
+15 AEJ:Economic Policy    2018       48     48        1     TRUE    
+16 AEJ:Economic Policy    2019       53     53        1     TRUE    
+17 AEJ:Economic Policy    2020       51     51        1     TRUE    
+18 AEJ:Economic Policy    2021       57     57        1     TRUE    
+19 AEJ:Economic Policy    2022       64     64        1     TRUE    
+20 AEJ:Economic Policy    2023       64     64        1     TRUE    
+21 AEJ:Economic Policy    2024       64     59        0.922 TRUE    
+22 AEJ:Economic Policy    2025       61     31        0.508 FALSE   
+23 AEJ:Macro              2015       35     26        0.743 FALSE   
+24 AEJ:Macro              2016       30     27        0.9   TRUE    
+25 AEJ:Macro              2017       32     32        1     TRUE    
+26 AEJ:Macro              2018       32     32        1     TRUE    
+27 AEJ:Macro              2019       40     40        1     TRUE    
+28 AEJ:Macro              2020       38     38        1     TRUE    
+29 AEJ:Macro              2021       44     44        1     TRUE    
+30 AEJ:Macro              2022       54     54        1     TRUE    
+31 AEJ:Macro              2023       55     54        0.982 TRUE    
+32 AEJ:Macro              2024       50     32        0.64  FALSE   
+33 AEJ:Macro              2025       43     14        0.326 FALSE   
+34 AEJ:Micro              2015       48     39        0.812 FALSE   
+35 AEJ:Micro              2016       43     42        0.977 TRUE    
+36 AEJ:Micro              2017       43     43        1     TRUE    
+37 AEJ:Micro              2018       40     40        1     TRUE    
+38 AEJ:Micro              2019       38     38        1     TRUE    
+39 AEJ:Micro              2020       33     33        1     TRUE    
+40 AEJ:Micro              2021       56     56        1     TRUE    
+41 AEJ:Micro              2022       82     82        1     TRUE    
+42 AEJ:Micro              2023       66     66        1     TRUE    
+43 AEJ:Micro              2024       52     47        0.904 TRUE    
+44 AEJ:Micro              2025       48     20        0.417 FALSE   
+45 AER                    2015      114     13        0.114 FALSE   
+46 AER                    2016      124     78        0.629 FALSE   
+47 AER                    2017      119    100        0.840 FALSE   
+48 AER                    2018      111    106        0.955 TRUE    
+49 AER                    2019      123    122        0.992 TRUE    
+50 AER                    2020      114    114        1     TRUE    
+51 AER                    2021      113    113        1     TRUE    
+52 AER                    2022      113    113        1     TRUE    
+53 AER                    2023       92     90        0.978 TRUE    
+54 AER                    2024      110     88        0.8   FALSE   
+55 AER                    2025      115     46        0.4   FALSE   
+56 AER:Insights           2019       24     22        0.917 TRUE    
+57 AER:Insights           2020       32     32        1     TRUE    
+58 AER:Insights           2021       32     32        1     TRUE    
+59 AER:Insights           2022       32     32        1     TRUE    
+60 AER:Insights           2023       34     34        1     TRUE    
+61 AER:Insights           2024       34     34        1     TRUE    
+62 AER:Insights           2025       32     12        0.375 FALSE   
+> write_csv(pubyears,delay.pubyears.csv)
+> 
+> delay <- ms %>%
++   semi_join(pubyears %>% filter(analyzed),by=c("Journal","year")) %>%
++   filter(mapped) %>%
++   mutate(Journal = factor(Journal,levels=journal.order),
++          post    = year >= delay.policy.year,
++          period  = factor(if_else(post,paste0(delay.policy.year," and later"),paste0("Before ",delay.policy.year)),
++                           levels=c(paste0("Before ",delay.policy.year),paste0(delay.policy.year," and later"))))
+filter: removed 16 rows (26%), 46 rows remaining
+semi_join: added no columns
+           > rows only in x                         (1,061)
+           > rows only in pubyears %>% filter(ana.. (    0)
+           > matched rows                            2,515
+           >                                        =======
+           > rows total                              2,515
+filter: removed 33 rows (1%), 2,482 rows remaining
+mutate: converted 'Journal' from character to factor (0 new NA)
+        converted 'period' from character to factor (0 new NA)
+        new variable 'post' (logical) with 2 unique values and 0% NA
+> 
+> delay %>%
++   select(doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,delay_months,period,has_package) %>%
++   mutate(delay_months=round(delay_months,1)) %>%
++   write_csv(delay.articles.csv)
+select: dropped 16 variables (Journal.published, pp_in_aer, volume, issue, page, …)
+mutate: changed 1,335 values (54%) of 'delay_months' (0 new NAs)
+> 
+> # ===========================
+> # Tests: is there a shift after the policy?
+> # Wilcoxon rank-sum (Hodges-Lehmann shift and 95% CI), Holm-adjusted across journals;
+> # Kolmogorov-Smirnov for any difference in distribution.
+> # Delays fall on a lattice (quarter midpoints; quarterly AEJ issues), so the Hodges-Lehmann shift and
+> # its CI are multiples of 3 months for the AEJs. The difference in means, with a Welch 95% CI, is reported
+> # alongside, as a continuous estimate.
+> # ===========================
+> 
+> shift_test <- function(df, cutoff) {
++   pre  <- df$delay_months[df$year <  cutoff]
++   post <- df$delay_months[df$year >= cutoff]
++   if (length(pre) < 10 || length(post) < 10) {
++     return(tibble(n_pre=length(pre),n_post=length(post),
++                   median_pre=if (length(pre)) median(pre) else NA_real_,median_post=median(post)))
++   }
++   w <- suppressWarnings(wilcox.test(post,pre,conf.int=TRUE))
++   k <- suppressWarnings(ks.test(post,pre))
++   t <- t.test(post,pre)
++   tibble(n_pre=length(pre),n_post=length(post),
++          first_year=min(df$year),last_year=max(df$year),
++          median_pre=median(pre),median_post=median(post),
++          shift=unname(w$estimate),shift_lo=w$conf.int[1],shift_hi=w$conf.int[2],
++          mean_pre=mean(pre),mean_post=mean(post),
++          mean_diff=mean(post)-mean(pre),mean_diff_lo=t$conf.int[1],mean_diff_hi=t$conf.int[2],
++          p_wilcox=w$p.value,p_ks=k$p.value)
++ }
+> 
+> tests <- bind_rows(
++   delay %>% group_by(Journal) %>% group_modify(~ shift_test(.x,delay.policy.year)) %>%
++     ungroup() %>% mutate(cutoff=delay.policy.year),
++   delay %>% group_by(Journal) %>% group_modify(~ shift_test(.x,delay.policy.year.alt)) %>%
++     ungroup() %>% mutate(cutoff=delay.policy.year.alt)) %>%
++   group_by(cutoff) %>%
++   mutate(p_wilcox_holm=p.adjust(p_wilcox,method="holm"),
++          p_ks_holm=p.adjust(p_ks,method="holm"),
++          significant=!is.na(p_wilcox_holm) & p_wilcox_holm < delay.alpha) %>%
++   ungroup() %>%
++   relocate(cutoff,.after=Journal)
+group_by: one grouping variable (Journal)
+ungroup: no grouping variables remain
+mutate: new variable 'cutoff' (integer) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+ungroup: no grouping variables remain
+mutate: new variable 'cutoff' (integer) with one unique value and 0% NA
+group_by: one grouping variable (cutoff)
+mutate (grouped): new variable 'p_wilcox_holm' (double) with 12 unique values and 8% NA
+                  new variable 'p_ks_holm' (double) with 11 unique values and 8% NA
+                  new variable 'significant' (logical) with 2 unique values and 0% NA
+ungroup: no grouping variables remain
+relocate: columns reordered (Journal, cutoff, n_pre, n_post, first_year, …)
+> 
+> tests %>% print(n=Inf,width=Inf)
+# A tibble: 12 × 21
+   Journal               cutoff n_pre n_post first_year last_year median_pre
+   <fct>                  <int> <int>  <int>      <dbl>     <dbl>      <dbl>
+ 1 AER                     2019   106    552       2018      2023       26.0
+ 2 AER:Insights            2019     0    186         NA        NA       NA  
+ 3 AEJ:Applied Economics   2019    85    301       2017      2024       20.0
+ 4 AEJ:Economic Policy     2019   136    348       2016      2024       24  
+ 5 AEJ:Macro               2019    91    230       2016      2023       26.0
+ 6 AEJ:Micro               2019   125    322       2016      2024       24  
+ 7 AER                     2020   228    430       2018      2023       25.0
+ 8 AER:Insights            2020    22    164       2019      2024       16.0
+ 9 AEJ:Applied Economics   2020   131    255       2017      2024       23.0
+10 AEJ:Economic Policy     2020   189    295       2016      2024       24  
+11 AEJ:Macro               2020   131    190       2016      2023       26.0
+12 AEJ:Micro               2020   163    284       2016      2024       24  
+   median_post      shift   shift_lo shift_hi mean_pre mean_post mean_diff
+         <dbl>      <dbl>      <dbl>    <dbl>    <dbl>     <dbl>     <dbl>
+ 1        25.0 -1.00      -3.00          2.00     27.9      27.6    -0.272
+ 2        16.0 NA         NA            NA        NA        NA      NA    
+ 3        26.0  6.00       3.00          6.00     22.0      27.8     5.79 
+ 4        30    3.00       3.00          6.00     26.9      30.7     3.78 
+ 5        32.0  6.00       3.00          9.00     26.9      33.8     6.88 
+ 6        30    6.00       6.00          9.00     24.5      30.7     6.17 
+ 7        25.0 -0.0000168 -2.00          2.00     27.4      27.8     0.396
+ 8        16.0  0.0000694 -0.0000105     3.00     15.3      15.9     0.609
+ 9        26.0  6.00       3.00          6.00     22.8      28.4     5.59 
+10        30    6.00       3.00          6.00     27.0      31.3     4.26 
+11        32.0  6.00       3.00          9.00     27.6      34.8     7.18 
+12        30    6.00       6.00          6.00     24.9      31.3     6.42 
+   mean_diff_lo mean_diff_hi  p_wilcox      p_ks p_wilcox_holm p_ks_holm
+          <dbl>        <dbl>     <dbl>     <dbl>         <dbl>     <dbl>
+ 1       -2.76          2.22  4.79e- 1  8.23e- 1      4.79e- 1  8.23e- 1
+ 2       NA            NA    NA        NA            NA        NA       
+ 3        4.04          7.54  2.06e-10  9.03e- 7      8.25e-10  3.61e- 6
+ 4        2.04          5.52  6.62e- 6  3.89e- 6      1.32e- 5  1.17e- 5
+ 5        4.42          9.33  7.35e- 7  9.24e- 6      2.21e- 6  1.85e- 5
+ 6        4.55          7.79  8.95e-15  1.68e-13      4.48e-14  8.41e-13
+ 7       -1.58          2.37  9.39e- 1  9.68e- 1      9.39e- 1  1   e+ 0
+ 8       -0.616         1.83  3.46e- 1  6.08e- 1      6.92e- 1  1   e+ 0
+ 9        4.06          7.12  3.88e-12  7.40e- 9      1.94e-11  2.96e- 8
+10        2.59          5.92  3.47e- 9  9.34e-10      1.39e- 8  4.67e- 9
+11        4.75          9.60  1.80e- 8  1.63e- 6      5.40e- 8  4.89e- 6
+12        4.93          7.91  2.11e-17  1.67e-15      1.26e-16  1.00e-14
+   significant
+   <lgl>      
+ 1 FALSE      
+ 2 FALSE      
+ 3 TRUE       
+ 4 TRUE       
+ 5 TRUE       
+ 6 TRUE       
+ 7 FALSE      
+ 8 FALSE      
+ 9 TRUE       
+10 TRUE       
+11 TRUE       
+12 TRUE       
+> write_csv(tests,delay.tests.csv)
+> 
+> main.tests <- tests %>% filter(cutoff==delay.policy.year)
+filter: removed 6 rows (50%), 6 rows remaining
+> 
+> # ===========================
+> # Figures
+> # ===========================
+> 
+> col.pre    <- "#2F6DB5"   # before the policy
+> col.post   <- "#C2611F"   # after the policy, significant shift
+> col.grey   <- "grey72"    # other journals
+> col.single <- "#44546A"   # all periods pooled
+> # not significant: both periods are shown in muted tints of their colors
+> col.pre.ns  <- "#93B1D6"
+> col.post.ns <- "#E2B08E"
+> 
+> theme_delay <- function() {
++   theme_classic() +
++     theme(axis.line.y = element_blank(),
++           axis.ticks.y = element_blank(),
++           axis.text.y = element_blank(),
++           panel.grid.major.x = element_line(colour="grey92",linewidth=0.3),
++           legend.position = "top",
++           legend.justification = "left",
++           legend.title = element_blank(),
++           strip.background = element_blank(),
++           strip.text = element_text(face="bold",hjust=0),
++           plot.subtitle = element_text(colour="grey30",size=8.5),
++           plot.caption = element_text(hjust=0,colour="grey40",size=7),
++           plot.title.position = "plot",
++           plot.caption.position = "plot")
++ }
+> 
+> xmax <- ceiling(max(delay$delay_months)/12)*12
+> # one bandwidth (months) for all densities, so that they are comparable and smooth
+> # (delays fall on a lattice: quarterly submission dates, monthly or quarterly issues)
+> bw.months <- 4
+> x.scale <- scale_x_continuous(breaks=seq(0,xmax,12),limits=c(-6,xmax),
++                               labels=function(x) paste0(x/12," yr"),expand=expansion(add=c(0,4)))
+> 
+> # Densities as data, so that they can be scaled and drawn as faint lines;
+> # points are jittered in a band below the density (one row per group).
+> dens_of <- function(df, ...) {
++   df %>% group_by(...) %>%
++     group_modify(~ { if (nrow(.x) < 5) return(tibble())
++                      d <- density(.x$delay_months,bw=bw.months,from=-6,to=xmax,n=256)
++                      tibble(x=d$x,y=d$y) }) %>%
++     ungroup()
++ }
+> ymax.dens <- max(dens_of(delay,Journal,period)$y,dens_of(delay,Journal)$y)
+group_by: 2 grouping variables (Journal, period)
+ungroup: no grouping variables remain
+group_by: one grouping variable (Journal)
+ungroup: no grouping variables remain
+> band <- ymax.dens*0.35     # height of a row of points
+> set.seed(20191001)
+> delay <- delay %>% mutate(jit=runif(n(),0.15,0.85))
+mutate: new variable 'jit' (double) with 2,482 unique values and 0% NA
+> 
+> caption.delay <- paste0(
++   "Submission: year and manuscript number from the DOI (e.g., 10.1257/aer.20151234). Within a submission year, the quartiles of the manuscript numbers\n",
++   "of all published articles define the submission quarter (dated at its middle). Only submission years with at least ",percent(delay.min.coverage),
++   " of their published articles observed\n",
++   "with such a DOI are used, and only publication years with at least ",percent(delay.min.pubyear)," of articles from those submission years. ",
++   "Publication: month of the print issue.\n",
++   "Delays fall on a grid of 3 months for the AEJs (quarterly issues), so the median shift is a multiple of 3 months.\n",
++   "Points: articles (jittered vertically). Lines: kernel density (bandwidth ",bw.months," months). Excluded: AEA P&P, JEL, JEP (no submission-based numbering).")
+> 
+> n.label <- function(df) df %>% summarize(n=n(),med=median(delay_months),.groups="drop")
+> 
+> # ---------------------------
+> # 1. Distribution for every journal, all periods
+> # ---------------------------
+> 
+> d.all <- dens_of(delay,Journal)
+group_by: one grouping variable (Journal)
+ungroup: no grouping variables remain
+> fig.all <- ggplot() +
++   geom_point(data=delay,aes(delay_months,-jit*band),colour=col.single,alpha=0.45,size=0.8,stroke=0) +
++   geom_line(data=d.all,aes(x,y),colour=col.single,alpha=0.5,linewidth=0.6) +
++   geom_vline(data=n.label(delay %>% group_by(Journal)),aes(xintercept=med),colour=col.single,linewidth=0.4) +
++   geom_text(data=n.label(delay %>% group_by(Journal)),
++             aes(x=xmax,y=ymax.dens,label=paste0("n = ",n,"\nmedian ",round(med/12,1)," yr")),
++             hjust=1,vjust=1,size=2.8,colour="grey30") +
++   facet_wrap(~ Journal,ncol=2) +
++   x.scale +
++   scale_y_continuous(limits=c(-band,ymax.dens*1.15),expand=expansion(add=0)) +
++   labs(title="Delay from submission to publication, AEA journals",
++        subtitle=paste0("Articles published ",min(delay$year),"-",max(delay$year),
++                        " (years depend on the journal; see delay_pubyears.csv). Vertical line: median."),
++        x="Time from submission to print publication",y=element_blank(),caption=caption.delay) +
++   theme_delay()
+group_by: one grouping variable (Journal)
+summarize: now 6 rows and 3 columns, ungrouped
+group_by: one grouping variable (Journal)
+summarize: now 6 rows and 3 columns, ungrouped
+> ggsave(file.path(Figures,"figure_delay_by_journal.png"),fig.all,width=9,height=8,dpi=300)
+> ggsave(file.path(Figures,"figure_delay_by_journal.pdf"),fig.all,width=9,height=8)
+> 
+> # ---------------------------
+> # 2. Before and after the policy, every journal
+> # Colors identify the period. If the shift is not significant (Holm-adjusted Wilcoxon), both
+> # periods are drawn in muted tints.
+> # ---------------------------
+> 
+> period.levels <- levels(delay$period)
+> sig.of <- function(j) {
++   s <- main.tests$significant[main.tests$Journal==j]
++   length(s) == 1 && isTRUE(s)
++ }
+> col.key <- function(period, sig) paste0(if_else(period==period.levels[1],"pre","post"),if_else(sig,"",".ns"))
+> col.values <- c("pre"=col.pre,"post"=col.post,"pre.ns"=col.pre.ns,"post.ns"=col.post.ns)
+> 
+> delay <- delay %>%
++   mutate(sig=vapply(as.character(Journal),sig.of,logical(1)),
++          key=col.key(period,sig),
++          row=as.integer(period))       # row of points: 1 = before, 2 = after
+mutate: new variable 'sig' (logical) with 2 unique values and 0% NA
+        new variable 'key' (character) with 4 unique values and 0% NA
+        new variable 'row' (integer) with 2 unique values and 0% NA
+> d.per <- dens_of(delay,Journal,period) %>%
++   left_join(delay %>% distinct(Journal,period,key),by=c("Journal","period"))
+group_by: 2 grouping variables (Journal, period)
+ungroup: no grouping variables remain
+distinct: removed 2,471 rows (>99%), 11 rows remaining
+left_join: added one column (key)
+           > rows only in x                              0
+           > rows only in delay %>% distinct(Jour.. (    0)
+           > matched rows                            2,816
+           >                                        =======
+           > rows total                              2,816
+> med.per <- delay %>% group_by(Journal,period,key) %>% summarize(med=median(delay_months),.groups="drop")
+group_by: 3 grouping variables (Journal, period, key)
+summarize: now 11 rows and 4 columns, ungrouped
+> 
+> period.years <- function(a,b) if (a==b) as.character(a) else paste0(a,"-",b)
+> stat.label <- function(t) {
++   if (is.na(t$p_wilcox)) return(paste0("No articles before the policy (n = ",t$n_post,")"))
++   p <- if (t$p_wilcox_holm < 0.001) "p < 0.001" else paste0("p = ",sprintf("%.2f",t$p_wilcox_holm))
++   paste0("Before: ",period.years(t$first_year,delay.policy.year-1)," (n = ",t$n_pre,"); after: ",
++          period.years(delay.policy.year,t$last_year)," (n = ",t$n_post,")\n",
++          "Median shift ",sprintf("%+.0f",t$shift)," months; mean ",sprintf("%+.1f",t$mean_diff),
++          " [",sprintf("%.1f",t$mean_diff_lo),", ",sprintf("%.1f",t$mean_diff_hi),"]\n",
++          "Wilcoxon ",p," (Holm)",
++          if (t$significant) "" else "\nNo significant shift")
++ }
+> labels.per <- main.tests %>% mutate(Journal=factor(Journal,levels=journal.order)) %>%
++   rowwise() %>% mutate(label=stat.label(pick(everything()))) %>% ungroup()
+mutate: no changes
+mutate: new variable 'label' (character) with 6 unique values and 0% NA
+ungroup: no grouping variables remain
+> 
+> legend.labels <- c("pre"=period.levels[1],"post"=period.levels[2],
++                    "pre.ns"=paste0(period.levels[1]," (no significant shift)"),
++                    "post.ns"=paste0(period.levels[2]," (no significant shift)"))
+> 
+> fig.policy <- ggplot() +
++   geom_point(data=delay,aes(delay_months,-(row-1+jit)*band/2,colour=key),alpha=0.55,size=0.8,stroke=0) +
++   geom_line(data=d.per,aes(x,y,colour=key,group=period),alpha=0.7,linewidth=0.6) +
++   geom_segment(data=med.per,aes(x=med,xend=med,y=0,yend=ymax.dens*0.9,colour=key),linewidth=0.5) +
++   geom_text(data=labels.per,aes(x=xmax,y=ymax.dens,label=label),hjust=1,vjust=1,size=2.6,colour="grey30",lineheight=0.95) +
++   facet_wrap(~ Journal,ncol=2) +
++   scale_colour_manual(values=col.values,labels=legend.labels,breaks=names(col.values)) +
++   guides(colour=guide_legend(nrow=2,override.aes=list(alpha=1,size=2.5,linewidth=1))) +
++   x.scale +
++   scale_y_continuous(limits=c(-band,ymax.dens*1.15),expand=expansion(add=0)) +
++   labs(title=paste0("Delay from submission to publication, before and after the ",delay.policy.year," AEA data policy"),
++        subtitle=paste0("By year of publication. Vertical lines: medians. Median shift: Hodges-Lehmann estimate (after minus before); mean: difference in means, Welch 95% CI.\n",
++                        "Muted colors: no significant shift (Wilcoxon rank-sum, Holm-adjusted across journals, ",percent(delay.alpha)," level). ",
++                        "Points: upper row before, lower row after."),
++        x="Time from submission to print publication",y=element_blank(),caption=caption.delay) +
++   theme_delay()
+> ggsave(file.path(Figures,"figure_delay_policy.png"),fig.policy,width=9,height=9,dpi=300)
+> ggsave(file.path(Figures,"figure_delay_policy.pdf"),fig.policy,width=9,height=9)
+> 
+> # ---------------------------
+> # 3. One figure per journal: the journal highlighted, all other journals in grey
+> # Two panels: before and after the policy. Dashed: the journal's median before the policy.
+> # ---------------------------
+> 
+> fig_highlight <- function(j) {
++   hl    <- delay %>% filter(Journal==j)
++   sig   <- sig.of(j)
++   t     <- labels.per %>% filter(Journal==j)
++   d.oth <- d.per %>% filter(Journal!=j)
++   d.hl  <- d.per %>% filter(Journal==j)
++   med   <- med.per %>% filter(Journal==j)
++   med.pre <- med %>% filter(period==period.levels[1])
++   # the journal's colors: after the policy in the accent color only if the shift is significant
++   hl.cols <- c("pre"=col.pre,"pre.ns"=col.pre,"post"=col.post,"post.ns"=col.pre.ns)
++   p <- ggplot() +
++     geom_line(data=d.oth,aes(x,y,group=Journal),colour=col.grey,linewidth=0.4) +
++     geom_point(data=hl,aes(delay_months,-jit*band,colour=key),alpha=0.6,size=1.1,stroke=0) +
++     geom_line(data=d.hl,aes(x,y,colour=key),alpha=0.8,linewidth=0.8) +
++     geom_segment(data=med,aes(x=med,xend=med,y=0,yend=ymax.dens*0.9,colour=key),linewidth=0.6) +
++     { if (nrow(med.pre)) geom_vline(xintercept=med.pre$med,colour=col.pre,linetype="dashed",linewidth=0.4) } +
++     facet_wrap(~ period,ncol=1,drop=FALSE) +
++     scale_colour_manual(values=hl.cols,guide="none") +
++     x.scale +
++     scale_y_continuous(limits=c(-band,ymax.dens*1.15),expand=expansion(add=0)) +
++     labs(title=paste0(j,": delay from submission to publication"),
++          subtitle=paste0(if (nrow(t)) gsub("\n","; ",t$label) else "","\n",
++                          "Colored: ",j," (points: articles; line: density; solid vertical: median; dashed: median before ",delay.policy.year,"). ",
++                          "Grey: other AEA journals."),
++          x="Time from submission to print publication",y=element_blank(),caption=caption.delay) +
++     theme_delay()
++   file <- paste0("figure_delay_",str_to_lower(str_replace_all(j,"[^A-Za-z]+","_")))
++   ggsave(file.path(Figures,paste0(file,".png")),p,width=8,height=6.5,dpi=300)
++   ggsave(file.path(Figures,paste0(file,".pdf")),p,width=8,height=6.5)
++   p
++ }
+> 
+> fig.highlight <- lapply(journal.order,fig_highlight)
+filter: removed 1,824 rows (73%), 658 rows remaining
+filter: removed 5 rows (83%), one row remaining
+filter: removed 512 rows (18%), 2,304 rows remaining
+filter: removed 2,304 rows (82%), 512 rows remaining
+filter: removed 9 rows (82%), 2 rows remaining
+filter: removed one row (50%), one row remaining
+filter: removed 2,296 rows (93%), 186 rows remaining
+filter: removed 5 rows (83%), one row remaining
+filter: removed 256 rows (9%), 2,560 rows remaining
+filter: removed 2,560 rows (91%), 256 rows remaining
+filter: removed 10 rows (91%), one row remaining
+filter: removed all rows (100%)
+filter: removed 2,096 rows (84%), 386 rows remaining
+filter: removed 5 rows (83%), one row remaining
+filter: removed 512 rows (18%), 2,304 rows remaining
+filter: removed 2,304 rows (82%), 512 rows remaining
+filter: removed 9 rows (82%), 2 rows remaining
+filter: removed one row (50%), one row remaining
+filter: removed 1,998 rows (80%), 484 rows remaining
+filter: removed 5 rows (83%), one row remaining
+filter: removed 512 rows (18%), 2,304 rows remaining
+filter: removed 2,304 rows (82%), 512 rows remaining
+filter: removed 9 rows (82%), 2 rows remaining
+filter: removed one row (50%), one row remaining
+filter: removed 2,161 rows (87%), 321 rows remaining
+filter: removed 5 rows (83%), one row remaining
+filter: removed 512 rows (18%), 2,304 rows remaining
+filter: removed 2,304 rows (82%), 512 rows remaining
+filter: removed 9 rows (82%), 2 rows remaining
+filter: removed one row (50%), one row remaining
+filter: removed 2,035 rows (82%), 447 rows remaining
+filter: removed 5 rows (83%), one row remaining
+filter: removed 512 rows (18%), 2,304 rows remaining
+filter: removed 2,304 rows (82%), 512 rows remaining
+filter: removed 9 rows (82%), 2 rows remaining
+filter: removed one row (50%), one row remaining
+> 
+> proc.time()
+   user  system elapsed 
+  7.220   0.962   7.236 
