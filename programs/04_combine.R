@@ -43,6 +43,16 @@ editorial.titles <- c("^front matter$",
                       "data and code availability policy",
                       "^note from the aea")
 
+# The May issue of the AER was the Papers & Proceedings until 2017 (volume 107);
+# since 2018 the P&P is a separate journal. Identify those articles by volume and issue.
+is_pp_in_aer <- function(Journal,volume,issue) {
+  vol.n <- suppressWarnings(as.integer(volume))
+  Journal=="AER" & !is.na(vol.n) & !is.na(issue) &
+    ((between(vol.n,89,100) & issue=="2") |
+     (between(vol.n,101,103) & issue=="3") |
+     (between(vol.n,104,107) & issue=="5"))
+}
+
 new.df %>%
   distinct(doi,.keep_all=TRUE) %>%
   mutate(doi = tolower(doi),
@@ -84,15 +94,18 @@ crossref.df %>%
                                      "AEA Papers and Proceedings"="AEA P&P")),
          Journal = if_else(Journal=="AEJ:Macroeconomics","AEJ:Macro",Journal),
          Journal = if_else(Journal=="AEJ:Microeconomics","AEJ:Micro",Journal)) %>%
+  # A few Crossref print dates disagree with the volume (e.g., aer.89.1.249, dated 1996).
+  # For journals with annual volumes, take the year from the volume.
+  mutate(vol.year = case_when(Journal=="AER" ~ suppressWarnings(as.integer(volume)) + 1910L,
+                              Journal=="JEL" ~ suppressWarnings(as.integer(volume)) + 1962L,
+                              Journal=="JEP" ~ suppressWarnings(as.integer(volume)) + 1986L,
+                              TRUE           ~ NA_integer_),
+         year = coalesce(vol.year,year)) %>%
   filter(year >= firstyear) %>%
-  # The May issue of the AER was the Papers & Proceedings until 2017 (volume 107);
-  # since 2018 the P&P is a separate journal. Identify those articles by volume and issue.
-  mutate(vol.n = suppressWarnings(as.integer(volume)),
-         pp_in_aer = Journal=="AER" & !is.na(vol.n) &
-                     ((between(vol.n,90,100) & issue=="2") |
-                      (between(vol.n,101,103) & issue=="3") |
-                      (between(vol.n,104,107) & issue=="5"))) %>%
+  mutate(pp_in_aer = is_pp_in_aer(Journal,volume,issue)) %>%
   select(doi,title,year,published.print,Journal,container.title,volume,issue,page,pp_in_aer) -> articles
+
+articles <- articles %>% as_tibble() %>% arrange(year,Journal,doi)
 
 nrow(articles)
 articles %>% count(Journal)
@@ -205,3 +218,43 @@ by.year %>% print(n=Inf)
 write_csv(by.year,   file=by_year.csv)
 write_csv(by.journal,file=by_journal.csv)
 write_csv(by.journal.pp,file=by_journal_pp.csv)
+
+# ===========================
+# Article-level database, with data-policy flags
+# ===========================
+# Policy years by journal (policy.year) are defined in config.R.
+# Policy status is determined by the journal an article is attributed to,
+# after moving the P&P articles printed in the May AER to AEA P&P.
+
+policy.period <- function(year) {
+  # policy changes: 2005 (AER data policy), 2009 (AEJs launched), 2019 (AEA-wide policy)
+  cut(year,breaks=c(-Inf,2004,2008,2018,Inf),labels=c("pre-2005","2005-2008","2009-2018","2019 and later"))
+}
+
+article.db <- articles.flagged %>%
+  mutate(Journal.published = Journal,
+         Journal           = if_else(pp_in_aer,"AEA P&P",Journal),
+         policy_year       = policy.year(Journal),
+         under_policy      = year >= policy_year,
+         has_package       = n_packages > 0,
+         period            = policy.period(year)) %>%
+  select(doi,title,year,Journal,Journal.published,pp_in_aer,volume,issue,page,
+         policy_year,under_policy,period,n_packages,has_package)
+
+article.db %>% count(Journal,under_policy,has_package) %>% print(n=Inf)
+
+saveRDS(article.db,file=article.db.Rds)
+write_csv(article.db,file=article.db.csv)
+
+# Share of articles with a package, by policy period (complete years only)
+article.db %>% filter(year <= lastyear) %>%
+  { bind_rows(mutate(.,group="All AEA journals"),
+              filter(.,Journal=="AER") %>% mutate(group="AER (excluding P&P)"),
+              filter(.,str_starts(Journal,"AEJ:")) %>% mutate(group="AEJs"),
+              filter(.,Journal %in% c("AER:Insights","JEL","JEP")) %>% mutate(group="AER:Insights, JEL, JEP"),
+              filter(.,Journal=="AEA P&P") %>% mutate(group="AEA P&P")) } %>%
+  group_by(group,period) %>%
+  summarize(first_year=min(year),last_year=max(year),
+            articles=n(),articles_with_package=sum(has_package),
+            share=articles_with_package/articles,.groups="drop") %>%
+  write_csv(by_period.csv)

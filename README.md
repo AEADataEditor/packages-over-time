@@ -6,7 +6,7 @@ Counts, by year of print publication, the research articles in AEA journals and 
 
 `programs/main.sh` runs, in order:
 
-1. `01_get_crossref.R`: all AEA journal works since 2000 from Crossref (the denominator), plus citations of openICPSR deposits in reference lists.
+1. `01_get_crossref.R`: all AEA journal works since 1999 from Crossref (DOIs were introduced in 1997; Crossref has AER and JEL from 1999) (the denominator), plus citations of openICPSR deposits in reference lists.
 2. `02_get_migration.R`: the mapping of historical supplements to openICPSR.
 3. `03_get_datacite.R`: openICPSR deposits in DataCite that link to AEA articles or follow the AEA title template.
 4. `04_combine.R`: restricts Crossref to research articles (dropping front matter, book reviews, and editorial/administrative items), matches packages to articles by migration mapping, DataCite link, reference list, or title, and tabulates by year and journal.
@@ -44,6 +44,8 @@ The `source` column in `outputs/packages_by_article.csv` records which methods m
 - `outputs/figures/`: articles with a replication package by year, against all research articles; and AER/AEA P&P and the other journals in separate figures.
 - `outputs/figures/figure_packages_aer_pp.*`, `figure_packages_other_journals.*`: the same, with the AEA Papers & Proceedings articles that were printed in the May AER (through 2017) attributed to the P&P (hatched). `figure_packages_aer_pp_asis.*` shows AER and P&P without the re-attribution (the May issue stays in the AER). AER and P&P are in one figure, all other journals in another; panels within a figure share one vertical scale, with a red reference line (50 and 30 articles).
 - `outputs/packages_by_journal_year_pp.csv`: counts by journal (P&P re-attributed), year, and `pp_in_aer`.
+- `outputs/articles_policy.csv`: one row per article, with the journal (as published and with the P&P re-attributed), whether it has a package, the year the journal's data policy started (`policy_year`: AER 2005, AEJs 2009, all others 2019), `under_policy` (published in or after that year), and the policy `period`.
+- `outputs/figures/figure_share_{aer,aej,others,pp}.*`: share of articles with a package by year, 1999 on, for the AER (without the May P&P), the AEJs, AER:Insights/JEL/JEP, and the P&P. Dashed lines mark the policy changes (2005 AER data policy, 2009 AEJs launched, 2019 AEA-wide policy); red lines are the pooled share in each of the four periods (`outputs/packages_by_period.csv`). The same dashed lines are on the count figures.
 - `outputs/packages_by_year.csv`, `outputs/packages_by_journal_year.csv`: counts of articles, articles with a package, and packages.
 - `outputs/packages_by_article.csv`: one row per package, with the matching method(s) in `source`.
 

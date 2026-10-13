@@ -11,9 +11,12 @@ download_crossref  <- TRUE
 download_migration <- TRUE
 download_datacite  <- TRUE
 
-## Time frame: Crossref download starts here; figures cover firstyear through lastyear
-firstpubday <- "2000-01-01"
-firstyear   <- 2000
+## Time frame: DOIs were introduced in 1997 and Crossref has AEA records from 1999 (AER, JEL) on,
+## but some print dates are wrong (e.g., 1999 articles dated 1996). Download everything Crossref
+## has (from firstpubday) and restrict to firstyear after correcting the year from the volume.
+## Figures end at the last complete year.
+firstpubday <- "1985-01-01"
+firstyear   <- 1999
 # last complete year; the current (partial) year is excluded from figures
 lastyear    <- as.integer(format(Sys.Date(),"%Y")) - 1
 
@@ -55,3 +58,20 @@ by_year.csv       <- file.path(Outputs,"packages_by_year.csv")
 by_journal.csv    <- file.path(Outputs,"packages_by_journal_year.csv")
 # P&P articles printed in the May AER (to 2017) attributed to the P&P
 by_journal_pp.csv <- file.path(Outputs,"packages_by_journal_year_pp.csv")
+# article-level database, with policy flags
+article.db.Rds    <- file.path(Outputs,"articles_policy.Rds")
+article.db.csv    <- file.path(Outputs,"articles_policy.csv")
+# by year and policy period
+by_period.csv     <- file.path(Outputs,"packages_by_period.csv")
+
+# Data (and code) availability policy
+# The AER data policy took effect in 2005 (announced in 2004). The AEJs had the policy from
+# their creation (2009). AER:Insights started in 2019 under the policy. No other AEA journal
+# (including the P&P, whether printed in the May AER or not) had a mandate before the
+# 2019 AEA-wide policy. Journal is the journal an article is attributed to,
+# after moving the P&P articles printed in the May AER to AEA P&P.
+policy.year <- function(Journal) {
+  dplyr::case_when(Journal=="AER"                  ~ 2005L,
+                   stringr::str_starts(Journal,"AEJ:") ~ 2009L,
+                   TRUE                             ~ 2019L)
+}
