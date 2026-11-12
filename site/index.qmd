@@ -1,6 +1,6 @@
 ---
 title: "Replication packages in AEA journals"
-subtitle: "Coverage over time, delay to publication, and the 2019 AEA data and code policy"
+subtitle: "Coverage over time, time from submission to publication, and the 2019 AEA data and code policy"
 ---
 
 ```{ojs}

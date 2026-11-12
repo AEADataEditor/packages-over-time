@@ -1,6 +1,6 @@
 # Regressions: did the 2019 AEA-wide data and code policy change
 #   (a) the presence of replication packages (article level, linear probability model),
-#   (b) the delay from submission to publication (months, articles from 06_delay.R)?
+#   (b) the time from submission to publication (months, articles from 06_time_to_pub.R)?
 #
 # Specifications (OLS; standard errors clustered by journal x publication year, CR1, t with G-1 df):
 #   its_fe     interrupted time series: y ~ post + journal fixed effects
@@ -9,7 +9,7 @@
 #              (P&P, JEL, JEP) against the AER and AEJs, which had one since 2005 and 2009:
 #              y ~ post x newly covered + journal fixed effects + year fixed effects
 #   did_trend  (a) only. As did, with separate linear trends for the two groups
-#   pkg        (b) only. y ~ post x has_package + journal fixed effects: does the change in delay
+#   pkg        (b) only. y ~ post x has_package + journal fixed effects: does the change in time to publication
 #              differ for articles with a replication package?
 # Each specification is estimated for all journals pooled, and (its_fe, its_trend) for each journal.
 #
@@ -123,21 +123,21 @@ reg.pkg %>% filter(Journal=="All journals") %>% print(n=Inf,width=Inf)
 write_csv(reg.pkg, reg.packages.csv)
 
 # ===========================
-# (b) Delay from submission to publication (months)
+# (b) Time from submission to publication (months)
 # ===========================
 
-delay <- read_csv(delay.articles.csv,show_col_types=FALSE) %>%
-  mutate(y=delay_months, has_package=as.integer(has_package))
+delay <- read_csv(ttp.articles.csv,show_col_types=FALSE) %>%
+  mutate(y=months_to_pub, has_package=as.integer(has_package))
 
-delay.specs <- list(
+ttp.specs <- list(
   its_fe    = list(formula=y ~ post + factor(Journal),                     term="post"),
   its_trend = list(formula=y ~ post + factor(Journal) + factor(Journal):t, term="post"),
   # differential change for articles with a package (main effect of has_package included)
   pkg       = list(formula=y ~ post*has_package + factor(Journal),          term="post:has_package"))
 
-reg.delay <- run_all(delay, delay.specs, its.journal, "delay_months")
+reg.delay <- run_all(delay, ttp.specs, its.journal, "months_to_pub")
 reg.delay %>% filter(Journal=="All journals") %>% print(n=Inf,width=Inf)
-write_csv(reg.delay, reg.delay.csv)
+write_csv(reg.delay, reg.ttp.csv)
 
 # ===========================
 # Figure: estimates at the actual and the placebo implementation years (pooled)
@@ -152,7 +152,7 @@ col.placebo <- "#2F6DB5"
 fig_placebo <- function(r, title, ylab, file, scale=1) {
   df <- r %>% filter(Journal=="All journals") %>%
     mutate(spec=factor(spec.labels[spec],levels=spec.labels),
-           kind=if_else(type=="actual","Actual (2019)","Placebo"),
+           kind=if_else(type=="actual","Actual (published 2019 and later)","Placebo"),
            across(c(estimate,lo,hi),~ .x*scale))
   p <- ggplot(df,aes(cutoff,estimate,colour=kind)) +
     geom_hline(yintercept=0,colour="grey50",linewidth=0.3) +
@@ -160,13 +160,13 @@ fig_placebo <- function(r, title, ylab, file, scale=1) {
     geom_linerange(aes(ymin=lo,ymax=hi),linewidth=0.7) +
     geom_point(size=2.2) +
     facet_wrap(~ spec,ncol=2,drop=TRUE) +
-    scale_colour_manual(values=c("Actual (2019)"=col.actual,"Placebo"=col.placebo)) +
+    scale_colour_manual(values=c("Actual (published 2019 and later)"=col.actual,"Placebo"=col.placebo)) +
     scale_x_continuous(breaks=c(reg.placebo.pre,reg.policy.year,reg.placebo.post)) +
     labs(title=title,
          subtitle=paste0("All journals pooled. OLS estimate and 95% CI (clustered by journal x year). Placebos at ",
                          paste(reg.placebo.pre,collapse=", ")," use years before ",reg.policy.year," only;\n",
                          "placebos at ",paste(reg.placebo.post,collapse=", ")," use years from ",reg.policy.year," on only."),
-         x="Implementation year (actual or placebo)",y=ylab) +
+         x="Cutoff year c: post = 1 if published in year c or later (actual c = 2019; others placebos)",y=ylab) +
     theme_classic() +
     theme(legend.position="top",legend.justification="left",legend.title=element_blank(),
           strip.background=element_blank(),strip.text=element_text(face="bold",hjust=0),
@@ -179,5 +179,5 @@ fig_placebo <- function(r, title, ylab, file, scale=1) {
 
 fig_placebo(reg.pkg,"Replication packages: effect of the 2019 policy, actual and placebo years",
             "Change in share with a package (percentage points)","figure_regressions_packages",scale=100)
-fig_placebo(reg.delay,"Delay to publication: effect of the 2019 policy, actual and placebo years",
-            "Change in delay (months)","figure_regressions_delay")
+fig_placebo(reg.delay,"Time from submission to publication: effect of the 2019 policy, actual and placebo years",
+            "Change in time to publication (months)","figure_regressions_time_to_pub")

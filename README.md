@@ -11,8 +11,8 @@ Counts, by year of print publication, the research articles in AEA journals and 
 3. `03_get_datacite.R`: openICPSR deposits in DataCite that link to AEA articles or follow the AEA title template.
 4. `04_combine.R`: restricts Crossref to research articles (dropping front matter, book reviews, and editorial/administrative items), matches packages to articles by migration mapping, DataCite link, reference list, or title, and tabulates by year and journal.
 5. `05_figures.R`: the figures.
-6. `06_delay.R`: the delay between submission and publication, from manuscript-number DOIs (see below), also split by whether the article has a replication package.
-7. `07_regressions.R`: regressions of package presence and of delay on the 2019 policy, with placebo implementation years (see below).
+6. `06_time_to_pub.R`: the time from submission to publication, from manuscript-number DOIs (see below), also split by whether the article has a replication package.
+7. `07_regressions.R`: regressions of package presence and of the time to publication on the 2019 policy, with placebo implementation years (see below).
 
 Settings (first and last year, whether to re-download) are in `programs/config.R`.
 
@@ -51,30 +51,30 @@ The `source` column in `outputs/packages_by_article.csv` records which methods m
 - `outputs/packages_by_year.csv`, `outputs/packages_by_journal_year.csv`: counts of articles, articles with a package, and packages.
 - `outputs/packages_by_article.csv`: one row per package, with the matching method(s) in `source`.
 
-## Delay from submission to publication
+## Time from submission to publication
 
-Since 2015 (AER, AEJs; AER:Insights from its start in 2019), DOIs are based on the manuscript number: `10.1257/aer.20151234` was submitted in 2015, as manuscript 1234 of that year (the counter restarts each year). The number has no date, but increases with submissions: within a submission year, the quartiles of the numbers of all eventually published manuscripts define the submission quarter, dated at its middle. Delay runs from there to the middle of the month of the print issue, so it is precise to about plus or minus 1.5 months.
+Since 2015 (AER, AEJs; AER:Insights from its start in 2019), DOIs are based on the manuscript number: `10.1257/aer.20151234` was submitted in 2015, as manuscript 1234 of that year (the counter restarts each year). The number has no date, but increases with submissions: within a submission year, the quartiles of the numbers of all eventually published manuscripts define the submission quarter, dated at its middle. The time to publication runs from there to the middle of the month of the print issue, so it is precise to about plus or minus 1.5 months.
 
-The quartiles are only meaningful when (nearly) all published manuscripts of a submission year are observed. Submission years that also published before the switch to manuscript-number DOIs, or that are still being published, are not mapped: `outputs/delay_cohorts.csv` gives each submission year's estimated coverage (from the distribution of publication year minus submission year), and years with at least 80% are used. Only publication years with at least 90% of their articles from mapped submission years are analyzed (`outputs/delay_pubyears.csv`), so that long delays are not cut off. The AEA P&P (numbered by conference program), JEL, and JEP (commissioned; numbers not restarted each year) are excluded. Thresholds are in `programs/config.R`.
+The quartiles are only meaningful when (nearly) all published manuscripts of a submission year are observed. Submission years that also published before the switch to manuscript-number DOIs, or that are still being published, are not mapped: `outputs/time_to_pub_cohorts.csv` gives each submission year's estimated coverage (from the distribution of publication year minus submission year), and years with at least 80% are used. Only publication years with at least 90% of their articles from mapped submission years are analyzed (`outputs/time_to_pub_pubyears.csv`), so that long times to publication are not cut off. The AEA P&P (numbered by conference program), JEL, and JEP (commissioned; numbers not restarted each year) are excluded. Thresholds are in `programs/config.R`.
 
-Before and after the 2019 AEA-wide policy is defined by year of publication. `outputs/delay_tests.csv` has, for each journal, the medians and means, the Hodges-Lehmann shift with its 95% confidence interval, the difference in means with a Welch 95% confidence interval, and Wilcoxon rank-sum and Kolmogorov-Smirnov p-values (raw and Holm-adjusted across journals), for 2019 and, as a robustness check, 2020 (papers accepted after the Data Editor started in mid-2019 are mostly published from 2020 on). AER:Insights has no articles before the policy. For the AEJs, delays fall on a grid of 3 months (quarter midpoints, quarterly issues), so the Hodges-Lehmann shift and its interval are multiples of 3 months and need not be centered; the difference in means is a continuous alternative, and the figures show both. Article-level delays are in `outputs/delay_articles.csv`.
+Before and after the 2019 AEA-wide policy is defined by **year of publication**: published before 2019 vs. published in 2019 or later. `outputs/time_to_pub_tests.csv` has, for each journal, the medians and means, the Hodges-Lehmann shift with its 95% confidence interval, the difference in means with a Welch 95% confidence interval, and Wilcoxon rank-sum and Kolmogorov-Smirnov p-values (raw and Holm-adjusted across journals), for 2019 and, as a robustness check, 2020 (papers accepted after the Data Editor started in mid-2019 are mostly published from 2020 on). AER:Insights has no articles before the policy. For the AEJs, times fall on a grid of 3 months (quarter midpoints, quarterly issues), so the Hodges-Lehmann shift and its interval are multiples of 3 months and need not be centered; the difference in means is a continuous alternative, and the figures show both. Article-level times (`months_to_pub`) are in `outputs/time_to_pub_articles.csv`.
 
-- `outputs/figures/figure_delay_by_journal.*`: the delay distribution for each journal (points: articles; line: kernel density).
-- `outputs/figures/figure_delay_policy.*`: before and after 2019, by journal. Blue: before; orange: after. Journals with no significant shift (Holm-adjusted Wilcoxon, 5%) are drawn in muted tints.
-- `outputs/figures/figure_delay_by_pubyear.*`, `figure_delay_by_subyear.*`: diagnostic, mean delay (95% CI) by year of publication and by year of submission, each journal against the others in grey (`outputs/delay_by_year.csv`). Recent submission years miss their slowest papers (hollow points).
-- `outputs/figures/figure_delay_{aer,aer_insights,aej_*}.*`: one figure per journal, the journal in color against all other journals in grey, before (top) and after (bottom) the policy.
+- `outputs/figures/figure_time_to_pub_by_journal.*`: the distribution of the time to publication for each journal (points: articles; line: kernel density).
+- `outputs/figures/figure_time_to_pub_policy.*`: before and after 2019, by journal. Blue: before; orange: after. Journals with no significant shift (Holm-adjusted Wilcoxon, 5%) are drawn in muted tints.
+- `outputs/figures/figure_time_to_pub_by_pubyear.*`, `figure_time_to_pub_by_subyear.*`: diagnostic, mean time to publication (95% CI) by year of publication and by year of submission, each journal against the others in grey (`outputs/time_to_pub_by_year.csv`). Recent submission years miss their slowest papers (hollow points).
+- `outputs/figures/figure_time_to_pub_{aer,aer_insights,aej_*}.*`: one figure per journal, the journal in color against all other journals in grey, before (top) and after (bottom) the policy.
 
-### Delay by replication package
+### Time to publication by replication package
 
-`outputs/delay_by_package.csv` compares articles with and without a replication package, by journal (and all journals pooled), over all years and before and after 2019. It uses the same statistics as above (with minus without). `outputs/figures/figure_delay_by_package.*` shows the distributions: journals in rows, before and after the policy in columns. Articles without a package after 2019 are mostly exempt (no data or code) or not matched.
+`outputs/time_to_pub_by_package.csv` compares articles with and without a replication package, by journal (and all journals pooled), over all years and before and after 2019. It uses the same statistics as above (with minus without). `outputs/figures/figure_time_to_pub_by_package.*` shows the distributions: journals in rows, before and after the policy in columns. Articles without a package after 2019 are mostly exempt (no data or code) or not matched.
 
 ### Kolmogorov–Smirnov tests
 
-`outputs/delay_ks.csv` compares the full distributions with two-sample Kolmogorov–Smirnov tests, by journal and pooled. It covers before vs. from 2019, and with vs. without a package (all years, before, after). *D* compares empirical CDFs, so groups of different sizes are comparable. The sizes enter through the effective sample size n₁n₂/(n₁+n₂) and the 5% critical value 1.358/√n_eff. Delays fall on a grid with many ties, so besides the asymptotic p-value there is a permutation p-value (`delay.ks.permutations` reshuffles of the group labels, sizes kept). It is Holm-adjusted across journals.
+`outputs/time_to_pub_ks.csv` compares the full distributions with two-sample Kolmogorov–Smirnov tests, by journal and pooled. It covers before vs. from 2019, and with vs. without a package (all years, before, after). *D* compares empirical CDFs, so groups of different sizes are comparable. The sizes enter through the effective sample size n₁n₂/(n₁+n₂) and the 5% critical value 1.358/√n_eff. Times fall on a grid with many ties, so besides the asymptotic p-value there is a permutation p-value (`ttp.ks.permutations` reshuffles of the group labels, sizes kept). It is Holm-adjusted across journals.
 
-## Regressions: did the 2019 policy change packages or delays?
+## Regressions: did the 2019 policy change packages or the time to publication?
 
-`07_regressions.R` estimates OLS models with standard errors clustered by journal × year (CR1, t with G−1 df). It covers (a) whether a research article has a package (linear probability model, 2010 on, all journals) and (b) the delay in months (articles in `delay_articles.csv`). *post* is 1 from the implementation year on.
+`07_regressions.R` estimates OLS models with standard errors clustered by journal × year (CR1, t with G−1 df). It covers (a) whether a research article has a package (linear probability model, 2010 on, all journals) and (b) the months from submission to publication (articles in `time_to_pub_articles.csv`). *post* is 1 for articles **published** in the cutoff year or later (`Post^c = 1[publication year ≥ c]`); it does not depend on submission or acceptance dates. The equations, with all variables defined, are on the site's Data and methods page (`site/methods.qmd`).
 
 - `its_fe`: *post* + journal fixed effects.
 - `its_trend`: adds a linear trend for each journal, centered on the cutoff.
@@ -86,7 +86,7 @@ Pooled models are estimated for all journals together. `its_fe` and `its_trend` 
 
 **Placebos.** The models are re-estimated with fake implementation years. Placebos at 2017 and 2018 use only years before 2019; placebos at 2020 and 2021 use only years from 2019 on. Settings are in `programs/config.R` (`reg.*`).
 
-Outputs: `outputs/regressions_packages.csv` and `outputs/regressions_delay.csv` (one row per outcome, journal, specification, and cutoff), and `outputs/figures/figure_regressions_{packages,delay}.*` (pooled estimates at the actual and placebo years).
+Outputs: `outputs/regressions_packages.csv` and `outputs/regressions_time_to_pub.csv` (one row per outcome, journal, specification, and cutoff), and `outputs/figures/figure_regressions_{packages,time_to_pub}.*` (pooled estimates at the actual and placebo years).
 
 ## Website
 

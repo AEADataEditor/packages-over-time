@@ -4,7 +4,7 @@ title: "Time from submission to publication"
 
 ## Computing time from submission to publication
 
-Since 2015, AER and AEJ DOIs, and AER:Insights DOIs from its start in 2019, are based on the manuscript number. For example, `10.1257/aer.20151234` was submitted in 2015, as manuscript 1234 of that year. Within a submission year, the quartiles of the manuscript numbers give the *submission quarter*. Publication month is taken from CrossRef. Time is computed  from the *middle month* of that quarter to the month of the print issue. P&P are excluded (there are deterministic submission and publication months), and JEL, and JEP are excluded (different submission mechanisms). Only publication years in which (nearly) all articles come from fully observed submission years are used. The [README](https://github.com/AEADataEditor/packages-over-time#delay-from-submission-to-publication) has the details.
+Since 2015, AER and AEJ DOIs, and AER:Insights DOIs from its start in 2019, are based on the manuscript number. For example, `10.1257/aer.20151234` was submitted in 2015, as manuscript 1234 of that year. Within a submission year, the quartiles of the manuscript numbers give the *submission quarter*. Publication month is taken from CrossRef. Time is computed  from the *middle month* of that quarter to the month of the print issue. P&P are excluded (there are deterministic submission and publication months), and JEL, and JEP are excluded (different submission mechanisms). Only publication years in which (nearly) all articles come from fully observed submission years are used. The [README](https://github.com/AEADataEditor/packages-over-time#time-from-submission-to-publication) has the details.
 
 The thread through the different analyses is: Has strengthened enforcement of the AEA's data (and code) availability policy, implemented in 2019 affected the time from submission to publication?
 
@@ -12,21 +12,21 @@ The thread through the different analyses is: Has strengthened enforcement of th
 
 ```{ojs}
 //| echo: false
-delay = FileAttachment("data/delay_articles.csv").csv({typed: true})
-byYear = FileAttachment("data/delay_by_year.csv").csv({typed: true})
-ks = FileAttachment("data/delay_ks.csv").csv({typed: true})
+delay = FileAttachment("data/time_to_pub_articles.csv").csv({typed: true})
+byYear = FileAttachment("data/time_to_pub_by_year.csv").csv({typed: true})
+ks = FileAttachment("data/time_to_pub_ks.csv").csv({typed: true})
 djournals = ["AER","AER:Insights","AEJ:Applied Economics","AEJ:Economic Policy","AEJ:Macro","AEJ:Micro"]
 viewof dj = Inputs.select(djournals, {label: "Journal", value: "AER"})
-viewof split = Inputs.radio(["Before / after 2019", "With / without a replication package"],
-                            {label: "Compare", value: "Before / after 2019"})
+viewof split = Inputs.radio(["Published before / from 2019", "With / without a replication package"],
+                            {label: "Compare", value: "Published before / from 2019"})
 ```
 
 ```{ojs}
 //| echo: false
 dsel = delay.filter(d => d.Journal === dj)
-groups = split.startsWith("Before")
-  ? [{name: "Before 2019", color: "#2F6DB5", f: d => d.year < 2019},
-     {name: "2019 and later", color: "#C2611F", f: d => d.year >= 2019}]
+groups = split.startsWith("Published")
+  ? [{name: "Published before 2019", color: "#2F6DB5", f: d => d.year < 2019},
+     {name: "Published 2019 and later", color: "#C2611F", f: d => d.year >= 2019}]
   : [{name: "With a package", color: "#1B4F8A", f: d => d.has_package},
      {name: "Without", color: "#6b6b6b", f: d => !d.has_package}]
 gdata = groups.map((g, i) => ({...g, id: `hatch-${i}`, angle: i === 0 ? 45 : -45,
@@ -40,8 +40,8 @@ thresholds = d3.range(-6, 102, 3)
     y: {label: "Share of articles (%)", grid: true, percent: true},
     marks: [
       ...gdata.map(g => Plot.rectY(g.rows, Plot.binX({y: "proportion"},
-          {x: "delay_months", thresholds, fill: `url(#${g.id})`, stroke: g.color, strokeWidth: 1.2, inset: 0}))),
-      ...gdata.map(g => Plot.ruleX([d3.median(g.rows, d => d.delay_months)], {stroke: g.color, strokeWidth: 1.5, strokeDasharray: "5,3"})),
+          {x: "months_to_pub", thresholds, fill: `url(#${g.id})`, stroke: g.color, strokeWidth: 1.2, inset: 0}))),
+      ...gdata.map(g => Plot.ruleX([d3.median(g.rows, d => d.months_to_pub)], {stroke: g.color, strokeWidth: 1.5, strokeDasharray: "5,3"})),
       Plot.ruleY([0])
     ]
   });
@@ -64,7 +64,7 @@ thresholds = d3.range(-6, 102, 3)
 //| echo: false
 pstr = p => p < 0.001 ? "< 0.001" : "= " + p.toFixed(3)
 ksRows = ks.filter(d => d.Journal === dj &&
-  (split.startsWith("Before") ? d.comparison.startsWith("Before") : d.comparison.startsWith("With")))
+  (split.startsWith("Published") ? d.comparison.startsWith("Published") : d.comparison.startsWith("With")))
 md`**Kolmogorov–Smirnov test** (are the two distributions different?):
 
 ${ksRows.map(d => (d.D === null || d.D === undefined)
@@ -110,4 +110,4 @@ Plot.plot({
 
 - **AER:** no change in the time from submission to publication after 2019.
 - **AEJs:** times are 3–7 months longer after 2019 than before. But the increase is gradual, from 2017 to 2022, not a step at 2019. For AEJ:Applied and AEJ:Micro it starts with papers submitted in 2017. A publication backlog in 2021–22 and COVID fall in the same window. The [policy regressions](regressions.qmd) test this with placebo years.
-- **With versus without a package:** AER articles with a package take about 6 months longer, but they did so before 2019 as well. Articles without a package include those exempt from the policy (no data or code) and those whose package was not matched.
+- **With versus without a package:** AER articles with a package take about 6 months longer, but those published before 2019 did as well. Articles without a package include those exempt from the policy (no data or code) and those whose package was not matched.

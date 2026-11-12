@@ -11,19 +11,21 @@ The AEA-wide data and code policy, with review by the AEA Data Editor, applies t
 
 All models are OLS on articles, with standard errors clustered by journal × year of publication. Years are **years of print publication**: *post* is 1 for articles published in or after the implementation year, and trends are in publication year.
 
+The policy indicator is defined by **year of print publication**: $\text{Post}^{c}_{t} = 1$ if the article was published in year $t \geq c$. The actual cutoff is $c = 2019$, so $\text{Post}^{2019}_t = 1$ for articles *published* in 2019 or later, whatever their submission or acceptance date. The equations are on [Data and methods](methods.qmd#regression-equations).
+
 - **All journals pooled:** journal fixed effects, with and without a linear trend for each journal. For packages, also a difference in differences: P&P, JEL and JEP (no policy before 2019) against the AER and AEJs. For the time to publication, also *post* × *has package*.
 - **A single journal:** with one journal, the journal fixed effect is just the intercept. The model without a trend is the difference in means before and after, and the model with a trend adds one linear trend in publication year.
 
 The full list of specifications is in Table 6 on [Data and methods](methods.qmd).
 
-**Placebos.** The same models are estimated with fake implementation years. Placebos at 2017 and 2018 use only years before 2019. Placebos at 2020 and 2021 use only years from 2019 on. The actual break is never inside a placebo sample. If the 2019 estimate reflects the policy, the placebo estimates should be close to zero.
+**Placebos.** The same models are estimated with fake cutoffs $c$: articles published in 2017 or later (or 2018, 2020, 2021) are coded as treated. Placebos at 2017 and 2018 use only articles published before 2019. Placebos at 2020 and 2021 use only articles published from 2019 on. The actual break is never inside a placebo sample. If the 2019 estimate reflects the policy, the placebo estimates should be close to zero.
 
 ## Explore by journal
 
 ```{ojs}
 //| echo: false
 regPkg = FileAttachment("data/regressions_packages.csv").csv({typed: true})
-regDelay = FileAttachment("data/regressions_delay.csv").csv({typed: true})
+regDelay = FileAttachment("data/regressions_time_to_pub.csv").csv({typed: true})
 viewof outcome = Inputs.radio(["Replication package (percentage points)", "Time from submission to publication (months)"],
                               {label: "Outcome", value: "Replication package (percentage points)"})
 regs = outcome.startsWith("Replication") ? regPkg : regDelay
@@ -37,20 +39,20 @@ viewof rj = Inputs.select(rjournals, {label: "Journal", value: "All journals"})
 //| echo: false
 // with a single journal, the journal FE is the intercept: label the models accordingly
 specLabels = rj === "All journals"
-  ? ({its_fe: "Journal FE", its_trend: "Journal FE + journal trends", did: "DiD (year FE)",
-      did_trend: "DiD + group trends", pkg: "Post × has package"})
-  : ({its_fe: "Before/after (no trend)", its_trend: "Before/after + linear trend"})
+  ? ({its_fe: "(1) Journal FE", its_trend: "(2) Journal FE + journal trends", did: "(3) DiD (year FE)",
+      did_trend: "(4) DiD + group trends", pkg: "(5) Post × has package"})
+  : ({its_fe: "(6) Before/after (no trend)", its_trend: "(7) Before/after + linear trend"})
 rsel = regs.filter(d => d.Journal === rj).map(d => ({...d, Spec: specLabels[d.spec],
-          kind: d.type === "actual" ? "Actual (2019)" : "Placebo",
+          kind: d.type === "actual" ? "Actual: published 2019 and later" : "Placebo",
           est: scale * d.estimate, lo95: scale * d.lo, hi95: scale * d.hi}))
 specs = Object.values(specLabels).filter(s => rsel.some(d => d.Spec === s))
 Plot.plot({
   title: `${rj}: estimated change at the actual and placebo implementation years`,
   width, height: 280 * Math.ceil(specs.length / 2), marginLeft: 50, marginTop: 30, marginBottom: 45,
   fx: {axis: null}, fy: {axis: null, padding: 0.2},
-  x: {type: "point", label: "Implementation year (actual or placebo)", tickFormat: "d", domain: [2017, 2018, 2019, 2020, 2021]},
+  x: {type: "point", label: "Cutoff c: post = 1 if published in year c or later", tickFormat: "d", domain: [2017, 2018, 2019, 2020, 2021]},
   y: {label: outcome, grid: true},
-  color: {legend: true, domain: ["Actual (2019)", "Placebo"], range: ["#C2611F", "#2F6DB5"]},
+  color: {legend: true, domain: ["Actual: published 2019 and later", "Placebo"], range: ["#C2611F", "#2F6DB5"]},
   marks: [
     Plot.ruleY([0], {stroke: "#888"}),
     Plot.text(rsel.filter((d, i, a) => a.findIndex(e => e.Spec === d.Spec) === i),

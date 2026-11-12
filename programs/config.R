@@ -76,37 +76,37 @@ policy.year <- function(Journal) {
                    TRUE                             ~ 2019L)
 }
 
-# Submission-to-publication delay (06_delay.R)
+# Time from submission to publication (06_time_to_pub.R)
 # DOIs based on manuscript numbers (10.1257/aer.20151234: submitted 2015, manuscript 1234).
 # The P&P (numbered by conference program), JEL and JEP (commissioned; counter not reset each year)
 # are excluded.
-delay.prefixes <- c("aer"="AER","aeri"="AER:Insights","app"="AEJ:Applied Economics",
+ttp.prefixes <- c("aer"="AER","aeri"="AER:Insights","app"="AEJ:Applied Economics",
                     "pol"="AEJ:Economic Policy","mac"="AEJ:Macro","mic"="AEJ:Micro")
 # policy that is compared: published in or after this year (AEA-wide policy, Data Editor review)
-delay.policy.year <- 2019L
+ttp.policy.year <- 2019L
 # alternative cutoff, as a robustness check (papers accepted after mid-2019 are published from 2020 on)
-delay.policy.year.alt <- 2020L
+ttp.policy.year.alt <- 2020L
 # A submission year (cohort) is mapped to quarters only if at least this share of its eventual
-# publications is observed with a manuscript-number DOI, and it has at least delay.min.cohort articles
-delay.min.coverage <- 0.8
-delay.min.cohort   <- 20L
-# lags (publication year - submission year) of delay.max.lag or more are pooled
-delay.max.lag      <- 7L
+# publications is observed with a manuscript-number DOI, and it has at least ttp.min.cohort articles
+ttp.min.coverage <- 0.8
+ttp.min.cohort   <- 20L
+# lags (publication year - submission year) of ttp.max.lag or more are pooled
+ttp.max.lag      <- 7L
 # A publication year is analyzed only if at least this share of its articles is from mapped cohorts
-delay.min.pubyear  <- 0.9
+ttp.min.pubyear  <- 0.9
 # significance level for a shift (Wilcoxon rank-sum, Holm-adjusted across journals)
-delay.alpha        <- 0.05
+ttp.alpha        <- 0.05
 # Outputs
-delay.articles.csv <- file.path(Outputs,"delay_articles.csv")
-delay.cohorts.csv  <- file.path(Outputs,"delay_cohorts.csv")
-delay.pubyears.csv <- file.path(Outputs,"delay_pubyears.csv")
-delay.tests.csv    <- file.path(Outputs,"delay_tests.csv")
-delay.by.year.csv  <- file.path(Outputs,"delay_by_year.csv")
-# delay by whether the article has a replication package
-delay.package.csv  <- file.path(Outputs,"delay_by_package.csv")
+ttp.articles.csv <- file.path(Outputs,"time_to_pub_articles.csv")
+ttp.cohorts.csv  <- file.path(Outputs,"time_to_pub_cohorts.csv")
+ttp.pubyears.csv <- file.path(Outputs,"time_to_pub_pubyears.csv")
+ttp.tests.csv    <- file.path(Outputs,"time_to_pub_tests.csv")
+ttp.by.year.csv  <- file.path(Outputs,"time_to_pub_by_year.csv")
+# time to publication by whether the article has a replication package
+ttp.package.csv  <- file.path(Outputs,"time_to_pub_by_package.csv")
 
 # Regressions (07_regressions.R): did the 2019 AEA-wide policy change (a) the presence of replication
-# packages, (b) the delay from submission to publication?
+# packages, (b) the time from submission to publication?
 # Actual implementation year, and placebo implementation years: placebos before the policy are estimated
 # on years before reg.policy.year only, placebos after it on years from reg.policy.year on only, so that
 # the actual break is never in a placebo sample.
@@ -123,7 +123,7 @@ reg.pkg.newly     <- c("AEA P&P","JEL","JEP")
 reg.pkg.excluded  <- c("AER:Insights")
 # Outputs
 reg.packages.csv  <- file.path(Outputs,"regressions_packages.csv")
-reg.delay.csv     <- file.path(Outputs,"regressions_delay.csv")
-# Kolmogorov-Smirnov tests of the delay distributions, with permutation p-values
-delay.ks.permutations <- 10000L
-delay.ks.csv       <- file.path(Outputs,"delay_ks.csv")
+reg.ttp.csv     <- file.path(Outputs,"regressions_time_to_pub.csv")
+# Kolmogorov-Smirnov tests of the time-to-publication distributions, with permutation p-values
+ttp.ks.permutations <- 10000L
+ttp.ks.csv       <- file.path(Outputs,"time_to_pub_ks.csv")
