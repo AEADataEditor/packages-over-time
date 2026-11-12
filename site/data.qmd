@@ -1,0 +1,94 @@
+---
+title: "Data"
+resources:
+  - data/articles.csv
+---
+
+One row per research article in an AEA journal, 1999 to the latest Crossref data, with the flags used in the analysis and the DOIs of the article and of its replication packages. Search across all columns, filter, sort by clicking a column header, and download the full file or the rows you selected.
+
+```{ojs}
+//| echo: false
+articles = FileAttachment("data/articles.csv").csv({typed: true})
+journalOrder = ["AER","AER:Insights","AEA P&P","AEJ:Applied Economics","AEJ:Economic Policy",
+                "AEJ:Macro","AEJ:Micro","JEL","JEP"]
+years = d3.extent(articles, d => d.year)
+viewof dJournal = Inputs.select(["All journals", ...journalOrder.filter(j => articles.some(d => d.Journal === j))],
+                                {label: "Journal", value: "All journals"})
+viewof dPackage = Inputs.radio(["All articles", "With a package", "Without a package"],
+                               {label: "Package", value: "All articles"})
+viewof dFrom = Inputs.range(years, {label: "Published from", step: 1, value: years[0]})
+viewof dTo = Inputs.range(years, {label: "Published to", step: 1, value: years[1]})
+filtered = articles.filter(d => (dJournal === "All journals" || d.Journal === dJournal)
+  && (dPackage === "All articles" || d.has_package === (dPackage === "With a package"))
+  && d.year >= dFrom && d.year <= dTo)
+viewof dSearch = Inputs.search(filtered, {placeholder: "Search titles, DOIs, …", label: "Search"})
+viewof dAll = Inputs.toggle({label: "Show all columns", value: false})
+```
+
+```{ojs}
+//| echo: false
+md`**${dSearch.length.toLocaleString()}** of ${articles.length.toLocaleString()} articles match.`
+```
+
+```{ojs}
+//| echo: false
+doiLink = (prefix) => v => {
+  if (v == null || v === "") return "";
+  const span = document.createElement("span");
+  String(v).split(" ").forEach((x, i) => {
+    if (i) span.append(" ");
+    const a = document.createElement("a");
+    a.href = "https://doi.org/" + x; a.target = "_blank"; a.textContent = x;
+    span.append(a);
+  });
+  return span;
+}
+yn = v => v === true ? "yes" : v === false ? "no" : ""
+shortCols = ["doi", "title", "Journal", "year", "has_package", "package_dois", "under_policy",
+             "in_pkg_regressions", "in_ttp_sample", "months_to_pub"]
+allCols = Object.keys(articles[0])
+Inputs.table(dSearch, {
+  columns: dAll ? allCols : shortCols,
+  header: {doi: "Article DOI", title: "Title", year: "Year", has_package: "Package",
+           package_dois: "Package DOI(s)", under_policy: "Under policy", in_pkg_regressions: "In package regressions",
+           in_ttp_sample: "In time-to-publication sample", months_to_pub: "Months to publication"},
+  format: {doi: doiLink(), package_dois: doiLink(), year: d => d, policy_year: d => d, sub_year: d => d ?? "",
+           has_package: yn, under_policy: yn, in_pkg_regressions: yn, in_ttp_sample: yn,
+           pp_in_aer: yn, complete_year: yn},
+  width: {title: 320, doi: 190, package_dois: 150},
+  layout: "auto", rows: 25
+})
+```
+
+```{ojs}
+//| echo: false
+html`<p>${DOM.download(() => new Blob([d3.csvFormat(dSearch)], {type: "text/csv"}),
+                         "aea_articles_selected.csv", "Download the selected rows (CSV)")}
+     <a class="btn btn-sm btn-outline-secondary" href="data/articles.csv" download>Download the full dataset (CSV)</a></p>`
+```
+
+## Variables
+
+| Variable | Description |
+|---|---|
+| `doi` | DOI of the article |
+| `title` | Title (Crossref) |
+| `Journal` | Journal the article is attributed to. P&P articles printed in the May AER through 2017 are counted as AEA P&P. |
+| `Journal_published` | Journal in which the article was printed (AER for those P&P articles) |
+| `year` | Year of print publication (from the volume for the AER, JEL and JEP) |
+| `volume`, `issue`, `page` | Volume, issue and pages (Crossref) |
+| `pp_in_aer` | The article is a P&P article printed in the May AER |
+| `policy_year` | First year in which the journal was covered by a data policy: 2005 (AER), 2009 (AEJs), 2019 (AEA P&P, AER:Insights, JEL, JEP) |
+| `under_policy` | Published in or after `policy_year` |
+| `has_package` | The article has at least one replication package in the AEA Data and Code Repository |
+| `n_packages` | Number of packages matched to the article |
+| `package_dois` | DOIs of the packages (openICPSR), separated by spaces. A migrated historical supplement whose openICPSR DOI is not recorded appears as `migration:<article DOI>` (none at present: all are also found with their DOI through DataCite or the title, which takes precedence). |
+| `package_sources` | How the packages were matched: `migration` (migrated historical supplement), `datacite` (DataCite link to the article), `reference` (cited in the article's reference list), `title` (deposit titled "Data and Code for: *article title*"); several joined by `+` |
+| `complete_year` | Publication year is complete. Only complete years enter the tables and figures. |
+| `in_pkg_regressions` | In the sample for the package regressions (complete years from 2010 on) |
+| `in_ttp_sample` | In the time-to-publication sample (manuscript-number DOI; years with enough coverage) |
+| `pub_month` | Month of the print issue (time-to-publication sample) |
+| `sub_year`, `sub_quarter` | Submission year (from the DOI) and quarter (from the manuscript number) |
+| `months_to_pub` | Months from the middle of the submission quarter to the month of the print issue |
+
+Sources: [Crossref](https://www.crossref.org/) (articles), [DataCite](https://datacite.org/) and the [AEA Data and Code Repository](https://www.openicpsr.org/openicpsr/aea) at openICPSR (packages). Code: [AEADataEditor/packages-over-time](https://github.com/AEADataEditor/packages-over-time).

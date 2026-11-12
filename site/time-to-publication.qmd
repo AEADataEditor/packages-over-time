@@ -71,7 +71,7 @@ ${ksRows.map(d => (d.D === null || d.D === undefined)
     ? `- ${d.period}: not tested (n = ${d.n1} and ${d.n2}).`
     : `- ${d.period}: D = ${d.D.toFixed(2)} (5% critical value for these sample sizes: ${d.D_crit_5.toFixed(2)}); permutation p ${pstr(d.p_permutation_holm)}, Holm-adjusted across journals: ${d.significant ? "**different**" : "not significantly different"}.`).join("\n")}
 
-All test statistics are in Tables 3–5 on [Data and methods](methods.qmd).`
+All test statistics are in Tables 3–5 on [Methods](methods.qmd).`
 ```
 
 Dashed vertical lines show the medians. For the AEJs, times fall on a 3-month grid (quarterly issues).

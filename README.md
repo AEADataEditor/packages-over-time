@@ -74,10 +74,10 @@ Before and after the 2019 AEA-wide policy is defined by **year of publication**:
 
 ## Regressions: did the 2019 policy change packages or the time to publication?
 
-`07_regressions.R` estimates OLS models with standard errors clustered by journal × year (CR1, t with G−1 df). It covers (a) whether a research article has a package (linear probability model, 2010 on, all journals) and (b) the months from submission to publication (articles in `time_to_pub_articles.csv`). *post* is 1 for articles **published** in the cutoff year or later (`Post^c = 1[publication year ≥ c]`); it does not depend on submission or acceptance dates. The equations, with all variables defined, are on the site's Data and methods page (`site/methods.qmd`).
+`07_regressions.R` estimates OLS models with standard errors clustered by journal × year (CR1, t with G−1 df). It covers (a) whether a research article has a package (linear probability model, and a probit reporting the average effect on articles with the policy term = 1, with a cluster-robust delta-method SE; 2010 on, all journals) and (b) the months from submission to publication (articles in `time_to_pub_articles.csv`). *post* is 1 for articles **published** in the cutoff year or later (`Post^c = 1[publication year ≥ c]`); it does not depend on submission or acceptance dates. The equations, with all variables defined, are on the site's Data and methods page (`site/methods.qmd`).
 
 - `its_fe`: *post* + journal fixed effects.
-- `its_trend`: adds a linear trend for each journal, centered on the cutoff.
+- `its_trend`: adds a linear trend in publication quarter for each journal (Crossref print month), centered on the first quarter of the cutoff year.
 - `did`, (a) only: *post* × *newly covered* + journal and year fixed effects. Newly covered: P&P, JEL, JEP, which had no policy before 2019. Comparison: AER and AEJs. AER:Insights is excluded.
 - `did_trend`, (a) only: adds a separate trend for each group.
 - `pkg`, (b) only: *post* × *has package* + journal fixed effects.
@@ -90,7 +90,7 @@ Outputs: `outputs/regressions_packages.csv` and `outputs/regressions_time_to_pub
 
 ## Website
 
-`site/` is a Quarto website with a journal selector, covering packages over time, time from submission to publication, and the regressions. All tables are on its Data and methods page. It reads the CSV files in `outputs/`; its pre-render step `site/_prepare.R` copies and aggregates them. The site is built and published by GitHub Actions (`.github/workflows/site.yml`) in the project's container image, on every push to `main` that changes `site/` or `outputs/`. It is not built locally. Before the first build, set Settings → Pages → Source to "GitHub Actions". The analysis is not re-run on GitHub, so run the pipeline and commit `outputs/` first.
+`site/` is a Quarto website with a journal selector, covering packages over time, time from submission to publication, and the regressions. All tables are on its Methods page; the article-level dataset (flags, article and package DOIs) is browsable and downloadable on its Data page. It reads the CSV files in `outputs/`; its pre-render step `site/_prepare.R` copies and aggregates them. The site is built and published by GitHub Actions (`.github/workflows/site.yml`) in the project's container image, on every push to `main` that changes `site/` or `outputs/`. It is not built locally. Before the first build, set Settings → Pages → Source to "GitHub Actions". The analysis is not re-run on GitHub, so run the pipeline and commit `outputs/` first.
 
 ## Running
 

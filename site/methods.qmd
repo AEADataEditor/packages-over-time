@@ -1,5 +1,5 @@
 ---
-title: "Data and methods"
+title: "Methods"
 ---
 
 ```{r}
@@ -20,6 +20,7 @@ journal.order <- c("AER","AER:Insights","AEA P&P","AEJ:Applied Economics","AEJ:E
 - **Packages:** a package is an openICPSR project. It is matched to an article through the migration of historical supplements, a DataCite link, a citation in the article's reference list, or a deposit titled "Data and Code for: *article title*".
 - **Time from submission to publication:** the submission year and manuscript number come from manuscript-number DOIs (since 2015). The quartiles of the manuscript numbers give the submission quarter. Publication is the month of the print issue.
 - **Years:** unless stated otherwise, years are years of print publication. Tables cover complete years only.
+- **Article-level data:** every article, with the flags used here and the DOIs of its packages, is on the [Data](data.qmd) page.
 
 ## Replication packages
 
@@ -91,7 +92,7 @@ rd("time_to_pub_ks.csv") %>%
 
 ### Regression equations {#regression-equations}
 
-All models are estimated by OLS at the article level. Standard errors are clustered by journal × year of publication (CR1, with *G* − 1 degrees of freedom).
+All models are estimated by OLS at the article level. For (a), each model is also estimated as a probit (see below). Standard errors are clustered by journal × year of publication (CR1, with *G* − 1 degrees of freedom).
 
 **Notation**
 
@@ -101,6 +102,7 @@ All models are estimated by OLS at the article level. Standard errors are cluste
 | $j$ | journal the article is attributed to (P&P articles printed in the May AER through 2017 count as AEA P&P) |
 | $t$ | **year of print publication** of article $i$ |
 | $c$ | cutoff year: 2019 (actual) or 2017, 2018, 2020, 2021 (placebos) |
+| $q_{i}$ | **publication quarter** of article $i$ (from the month of the print issue), counted from the first quarter of year $c$: $q_i = 4\,(t - c) + (\text{quarter}_i - 1)$. So $q_i = 0$ for January–March of year $c$, $-1$ for October–December of year $c-1$. |
 | $y_{ijt}$ | outcome: (a) $\text{Pkg}_{i}$, or (b) $\text{Months}_{i}$ |
 | $\text{Pkg}_{i}$ | 1 if article $i$ has a replication package in the AEA Data and Code Repository, 0 otherwise. In (a) it is the outcome (linear probability model); in (b) it is a regressor. |
 | $\text{Months}_{i}$ | months from the middle of the submission quarter to the month of the print issue |
@@ -108,7 +110,7 @@ All models are estimated by OLS at the article level. Standard errors are cluste
 | $\text{New}_{j}$ | 1 for journals with no data policy before 2019 (AEA P&P, JEL, JEP); 0 for the AER (policy since 2005) and AEJs (since 2009) |
 | $\alpha_j$ | journal fixed effect |
 | $\lambda_t$ | publication-year fixed effect |
-| $(t - c)$ | linear trend in publication year, centered on the cutoff, so that $\beta$ is the level shift at $c$ |
+| $q_{i}$ (as a regressor) | linear trend in publication quarter, centered on the first quarter of the cutoff year, so that $\beta$ is the level shift at $c$ |
 | $\varepsilon_{ijt}$ | error term |
 
 The coefficient reported for each model is $\beta$.
@@ -118,18 +120,24 @@ The coefficient reported for each model is $\beta$.
 | Label | Equation | Used for |
 |---|---|---|
 | Journal FE | (1) $\; y_{ijt} = \alpha_j + \beta\, \text{Post}^{c}_{t} + \varepsilon_{ijt}$ | (a), (b); all journals pooled |
-| Journal FE + journal trends | (2) $\; y_{ijt} = \alpha_j + \delta_j\,(t-c) + \beta\, \text{Post}^{c}_{t} + \varepsilon_{ijt}$ | (a), (b); all journals pooled |
+| Journal FE + journal quarterly trends | (2) $\; y_{ijt} = \alpha_j + \delta_j\,q_{i} + \beta\, \text{Post}^{c}_{t} + \varepsilon_{ijt}$ | (a), (b); all journals pooled |
 | DiD (year FE) | (3) $\; y_{ijt} = \alpha_j + \lambda_t + \beta\, (\text{Post}^{c}_{t} \times \text{New}_j) + \varepsilon_{ijt}$ | (a); pooled, AER:Insights excluded |
-| DiD + group trends | (4) $\; y_{ijt} = \alpha_j + \lambda_t + \theta\, \text{New}_j\,(t-c) + \beta\, (\text{Post}^{c}_{t} \times \text{New}_j) + \varepsilon_{ijt}$ | (a); pooled, AER:Insights excluded |
+| DiD + group quarterly trends | (4) $\; y_{ijt} = \alpha_j + \lambda_t + \theta\, \text{New}_j\,q_{i} + \beta\, (\text{Post}^{c}_{t} \times \text{New}_j) + \varepsilon_{ijt}$ | (a); pooled, AER:Insights excluded |
 | Post × has package | (5) $\; \text{Months}_{i} = \alpha_j + \pi\, \text{Post}^{c}_{t} + \gamma\, \text{Pkg}_i + \beta\, (\text{Post}^{c}_{t} \times \text{Pkg}_i) + \varepsilon_{ijt}$ | (b); pooled |
 | Before/after (no trend) | (6) $\; y_{it} = \alpha + \beta\, \text{Post}^{c}_{t} + \varepsilon_{it}$ | (a), (b); one journal at a time |
-| Before/after + linear trend | (7) $\; y_{it} = \alpha + \delta\,(t-c) + \beta\, \text{Post}^{c}_{t} + \varepsilon_{it}$ | (a), (b); one journal at a time |
+| Before/after + quarterly trend | (7) $\; y_{it} = \alpha + \delta\,q_{i} + \beta\, \text{Post}^{c}_{t} + \varepsilon_{it}$ | (a), (b); one journal at a time |
 
 How to read the coefficients:
 
-- **(1), (2), (6), (7):** $\beta$ is the change in the outcome for articles published from year $c$ on, relative to articles published before. In (2) and (7), this is relative to the journal's own linear trend. In (6) and (7), with a single journal, the journal fixed effect is just the intercept $\alpha$, so (6) is the difference in means.
+- **(1), (2), (6), (7):** $\beta$ is the change in the outcome for articles published from year $c$ on, relative to articles published before. In (2) and (7), this is relative to the journal's own linear trend in publication quarter. In (6) and (7), with a single journal, the journal fixed effect is just the intercept $\alpha$, so (6) is the difference in means.
 - **(3), (4):** $\beta$ is the change for newly covered journals (P&P, JEL, JEP), relative to the change in the AER and AEJs in the same publication year. In (4), the common trend is absorbed by $\lambda_t$, and $\theta$ allows the newly covered journals their own trend.
 - **(5):** $\pi$ is the change for articles without a package, and $\beta$ is how much more (or less) the time to publication changed for articles with one.
+
+**Probit, for (a).** Equations (1)–(4), (6) and (7) are also estimated as probits, $\Pr(\text{Pkg}_i = 1) = \Phi(x_i'b)$, where $x_i'b$ is the right-hand side of the equation without $\varepsilon$. A probit coefficient is not a change in probability, so the reported effect is
+
+$$\hat\Delta = \frac{1}{N_1} \sum_{i:\, D_i = 1} \left[\Phi(x_i'\hat b) - \Phi(x_i'\hat b - \hat\beta)\right],$$
+
+where $D_i$ is the policy term ($\text{Post}^{c}_t$, or $\text{Post}^{c}_t \times \text{New}_j$ in the DiD) and $N_1$ the number of articles with $D_i = 1$. It is the average change in the probability of having a package for the articles exposed to the (actual or placebo) policy, in percentage points, comparable to $\beta$ from the linear probability model. Its standard error uses the delta method with the same cluster-robust covariance. A journal whose outcome does not vary in the sample (for example, no packages at all) is perfectly predicted by its fixed effect and is dropped. For a single journal, the probit is not estimated when the outcome is constant before or after the cutoff; those cells are missing in Table 9 and in the figure.
 
 **Samples.**
 - **Actual cutoff ($c = 2019$):** all years.
@@ -139,39 +147,39 @@ How to read the coefficients:
 - **(b):** articles in the time-to-publication sample (AER, AER:Insights, AEJs; publication years in which submission quarters can be assigned, 2016–2024 depending on the journal).
 
 ```{r}
-spec.labels <- c(its_fe="(1) Journal FE", its_trend="(2) Journal FE + journal trends",
-                 did="(3) DiD (year FE)", did_trend="(4) DiD + group trends", pkg="(5) Post x has package")
-spec.single <- c(its_fe="(6) Before/after (no trend)", its_trend="(7) Before/after + linear trend")
+spec.labels <- c(its_fe="(1) Journal FE", its_trend="(2) Journal FE + journal quarterly trends",
+                 did="(3) DiD (year FE)", did_trend="(4) DiD + group quarterly trends", pkg="(5) Post x has package")
+spec.single <- c(its_fe="(6) Before/after (no trend)", its_trend="(7) Before/after + quarterly trend")
 cell <- function(est, lo, hi, p, scale=1)
   paste0(sgn(scale*est), ifelse(p < 0.05, "*", ""), " ", ci(scale*lo, scale*hi))
 pooled_table <- function(r, scale=1) {
   r %>% filter(Journal=="All journals") %>%
     mutate(Specification=factor(spec.labels[spec], levels=spec.labels),
            value=cell(estimate, lo, hi, p, scale)) %>%
-    select(Specification, cutoff, value) %>%
+    select(any_of("method"), Specification, cutoff, value) %>%
     pivot_wider(names_from=cutoff, values_from=value) %>%
-    arrange(Specification) %>%
-    select(Specification, `2017`, `2018`, `2019`, `2020`, `2021`) %>%
-    rename_with(~ paste0("Published ≥ ", .x, ifelse(.x == "2019", " (actual)", " (placebo)")), -Specification)
+    arrange(across(any_of("method")), Specification) %>%
+    select(any_of(c(Method="method")), Specification, `2017`, `2018`, `2019`, `2020`, `2021`) %>%
+    rename_with(~ paste0("Published ≥ ", .x, ifelse(.x == "2019", " (actual)", " (placebo)")), matches("^20"))
 }
 journal_table <- function(r, scale=1) {
   r %>% filter(Journal!="All journals") %>%
     mutate(Journal=factor(Journal, levels=journal.order),
            Specification=factor(spec.single[spec], levels=spec.single)) %>%
-    arrange(Journal, Specification, cutoff) %>%
-    transmute(Journal, Specification,
+    arrange(across(any_of("method")), Journal, Specification, cutoff) %>%
+    transmute(across(any_of(c(Method="method"))), Journal, Specification,
               `Cutoff c (published ≥ c)`=paste0(cutoff, ifelse(type=="actual", " (actual)", " (placebo)")),
               Sample=paste0(first_year, "–", last_year), n, Clusters=n_clusters,
               `Mean before`=num(scale*mean_pre), Estimate=sgn(scale*estimate),
               `95% CI`=ci(scale*lo, scale*hi), p=pv(p))
 }
-reg.pkg   <- rd("regressions_packages.csv")
-reg.delay <- rd("regressions_time_to_pub.csv")
+reg.pkg   <- rd("regressions_packages.csv") %>% mutate(method=if_else(method=="Probit", "Probit (average effect)", "Linear probability"))
+reg.delay <- rd("regressions_time_to_pub.csv") %>% select(-method)
 ```
 
 **Table 7. Replication package, all journals pooled (percentage points)**
 
-Coefficient $\beta$ from equations (1)–(4). Columns are the cutoff $c$: $\text{Post}^{c}_t = 1$ for articles published in year $c$ or later. $c = 2019$ is the actual policy; the other columns are placebos. Each cell shows the estimate, then the 95% confidence interval. \* marks p < 0.05.
+Linear probability model: coefficient $\beta$ from equations (1)–(4). Probit: average effect $\hat\Delta$ from the probit versions of the same equations. Columns are the cutoff $c$: $\text{Post}^{c}_t = 1$ for articles published in year $c$ or later. $c = 2019$ is the actual policy; the other columns are placebos. Each cell shows the estimate, then the 95% confidence interval. \* marks p < 0.05.
 
 ```{r}
 kable(pooled_table(reg.pkg, scale=100))
@@ -191,7 +199,7 @@ kable(pooled_table(reg.delay))
 ## Show Table 9
 
 ```{r}
-kable(journal_table(reg.pkg, scale=100), align="lllllrrrrrr")
+kable(journal_table(reg.pkg, scale=100), align="llllllrrrrrr")
 ```
 :::
 

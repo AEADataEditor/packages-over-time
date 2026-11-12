@@ -4,91 +4,120 @@ title: "Did the 2019 policy change packages or the time from submission to publi
 
 The AEA-wide data and code policy, with review by the AEA Data Editor, applies to articles published from 2019. Two outcomes are tested, separately:
 
-- **(a) Presence of a replication package:** whether a research article has one (linear probability model). Articles from 2010 on, all AEA journals.
+- **(a) Presence of a replication package:** whether a research article has one (linear probability model, and probit). Articles from 2010 on, all AEA journals.
 - **(b) Time from submission to publication:** months from submission to print publication. AER, AER:Insights, and AEJs, in the years where it can be measured (2016–2024, depending on the journal).
 
 ## Specifications
 
-All models are OLS on articles, with standard errors clustered by journal × year of publication. Years are **years of print publication**: *post* is 1 for articles published in or after the implementation year, and trends are in publication year.
+All models are OLS on articles, with standard errors clustered by journal × year of publication. For replication packages, each model is also estimated as a probit; the probit estimate shown is the average change in the probability of having a package for the articles with *post* = 1, in percentage points. Linear trends are in **publication quarter**, centered on the first quarter of the cutoff year.
 
-The policy indicator is defined by **year of print publication**: $\text{Post}^{c}_{t} = 1$ if the article was published in year $t \geq c$. The actual cutoff is $c = 2019$, so $\text{Post}^{2019}_t = 1$ for articles *published* in 2019 or later, whatever their submission or acceptance date. The equations are on [Data and methods](methods.qmd#regression-equations).
+The policy indicator is defined by **year of print publication**: $\text{Post}^{c}_{t} = 1$ if the article was published in year $t \geq c$. The actual cutoff is $c = 2019$, so $\text{Post}^{2019}_t = 1$ for articles *published* in 2019 or later, whatever their submission or acceptance date. The equations are on [Methods](methods.qmd#regression-equations).
 
 - **All journals pooled:** journal fixed effects, with and without a linear trend for each journal. For packages, also a difference in differences: P&P, JEL and JEP (no policy before 2019) against the AER and AEJs. For the time to publication, also *post* × *has package*.
-- **A single journal:** with one journal, the journal fixed effect is just the intercept. The model without a trend is the difference in means before and after, and the model with a trend adds one linear trend in publication year.
+- **A single journal:** with one journal, the journal fixed effect is just the intercept. The model without a trend is the difference in means before and after, and the model with a trend adds one linear trend in publication quarter.
 
-The full list of specifications is in Table 6 on [Data and methods](methods.qmd).
+The full list of specifications is in Table 6 on [Methods](methods.qmd).
 
 **Placebos.** The same models are estimated with fake cutoffs $c$: articles published in 2017 or later (or 2018, 2020, 2021) are coded as treated. Placebos at 2017 and 2018 use only articles published before 2019. Placebos at 2020 and 2021 use only articles published from 2019 on. The actual break is never inside a placebo sample. If the 2019 estimate reflects the policy, the placebo estimates should be close to zero.
 
-## Explore by journal
+## Results
 
 ```{ojs}
 //| echo: false
 regPkg = FileAttachment("data/regressions_packages.csv").csv({typed: true})
-regDelay = FileAttachment("data/regressions_time_to_pub.csv").csv({typed: true})
-viewof outcome = Inputs.radio(["Replication package (percentage points)", "Time from submission to publication (months)"],
-                              {label: "Outcome", value: "Replication package (percentage points)"})
-regs = outcome.startsWith("Replication") ? regPkg : regDelay
-scale = outcome.startsWith("Replication") ? 100 : 1
-rjournals = ["All journals", ...["AER","AER:Insights","AEA P&P","AEJ:Applied Economics","AEJ:Economic Policy",
-             "AEJ:Macro","AEJ:Micro","JEL","JEP"].filter(j => regs.some(d => d.Journal === j))]
-viewof rj = Inputs.select(rjournals, {label: "Journal", value: "All journals"})
+regTtp = FileAttachment("data/regressions_time_to_pub.csv").csv({typed: true})
+journalOrder = ["AER","AER:Insights","AEA P&P","AEJ:Applied Economics","AEJ:Economic Policy",
+                "AEJ:Macro","AEJ:Micro","JEL","JEP"]
+journalsIn = regs => ["All journals", ...journalOrder.filter(j => regs.some(d => d.Journal === j))]
+// with a single journal, the journal FE is the intercept: label the models accordingly
+specLabelsFor = j => j === "All journals"
+  ? ({its_fe: "(1) Journal FE", its_trend: "(2) Journal FE + journal quarterly trends", did: "(3) DiD (year FE)",
+      did_trend: "(4) DiD + group quarterly trends", pkg: "(5) Post × has package"})
+  : ({its_fe: "(6) Before/after (no trend)", its_trend: "(7) Before/after + quarterly trend"})
+function estimatePlot(regs, j, {scale = 1, ylabel, title}) {
+  const specLabels = specLabelsFor(j);
+  const rsel = regs.filter(d => d.Journal === j).map(d => ({...d, Spec: specLabels[d.spec],
+          kind: d.type === "actual" ? "Actual: published 2019 and later" : "Placebo",
+          est: scale * d.estimate, lo95: scale * d.lo, hi95: scale * d.hi}));
+  const specs = Object.values(specLabels).filter(s => rsel.some(d => d.Spec === s));
+  const fx = d => specs.indexOf(d.Spec) % 2, fy = d => Math.floor(specs.indexOf(d.Spec) / 2);
+  return Plot.plot({
+    title, width, height: 280 * Math.ceil(specs.length / 2), marginLeft: 50, marginTop: 30, marginBottom: 45,
+    fx: {axis: null}, fy: {axis: null, padding: 0.2},
+    x: {type: "point", label: "Cutoff c: post = 1 if published in year c or later", tickFormat: "d",
+        domain: [2017, 2018, 2019, 2020, 2021]},
+    y: {label: ylabel, grid: true},
+    color: {legend: true, domain: ["Actual: published 2019 and later", "Placebo"], range: ["#C2611F", "#2F6DB5"]},
+    marks: [
+      Plot.ruleY([0], {stroke: "#888"}),
+      Plot.text(rsel.filter((d, i, a) => a.findIndex(e => e.Spec === d.Spec) === i),
+                {fx, fy, text: "Spec", frameAnchor: "top", fontWeight: "bold", fontSize: 12, dy: -14}),
+      Plot.ruleX(rsel, {x: "cutoff", y1: "lo95", y2: "hi95", stroke: "kind", strokeWidth: 2.5, fx, fy}),
+      Plot.dot(rsel, {x: "cutoff", y: "est", fill: "kind", r: 4, fx, fy,
+               channels: {Years: d => `${d.first_year}–${d.last_year}`, n: "n", Clusters: "n_clusters",
+                          "Pre mean": d => (scale * d.mean_pre).toFixed(1), p: d => d.p.toFixed(3)},
+               tip: {format: {x: "d", fx: false, fy: false, y: d => d.toFixed(2)}}})
+    ]
+  });
+}
+```
+
+::: {.panel-tabset}
+
+## Replication packages
+
+```{ojs}
+//| echo: false
+viewof pkgMethod = Inputs.radio(["Linear probability model", "Probit (average effect)"],
+                                {label: "Method:", value: "Linear probability model"})
+viewof pkgJournal = Inputs.select(journalsIn(regPkg), {label: "Journal", value: "All journals"})
 ```
 
 ```{ojs}
 //| echo: false
-// with a single journal, the journal FE is the intercept: label the models accordingly
-specLabels = rj === "All journals"
-  ? ({its_fe: "(1) Journal FE", its_trend: "(2) Journal FE + journal trends", did: "(3) DiD (year FE)",
-      did_trend: "(4) DiD + group trends", pkg: "(5) Post × has package"})
-  : ({its_fe: "(6) Before/after (no trend)", its_trend: "(7) Before/after + linear trend"})
-rsel = regs.filter(d => d.Journal === rj).map(d => ({...d, Spec: specLabels[d.spec],
-          kind: d.type === "actual" ? "Actual: published 2019 and later" : "Placebo",
-          est: scale * d.estimate, lo95: scale * d.lo, hi95: scale * d.hi}))
-specs = Object.values(specLabels).filter(s => rsel.some(d => d.Spec === s))
-Plot.plot({
-  title: `${rj}: estimated change at the actual and placebo implementation years`,
-  width, height: 280 * Math.ceil(specs.length / 2), marginLeft: 50, marginTop: 30, marginBottom: 45,
-  fx: {axis: null}, fy: {axis: null, padding: 0.2},
-  x: {type: "point", label: "Cutoff c: post = 1 if published in year c or later", tickFormat: "d", domain: [2017, 2018, 2019, 2020, 2021]},
-  y: {label: outcome, grid: true},
-  color: {legend: true, domain: ["Actual: published 2019 and later", "Placebo"], range: ["#C2611F", "#2F6DB5"]},
-  marks: [
-    Plot.ruleY([0], {stroke: "#888"}),
-    Plot.text(rsel.filter((d, i, a) => a.findIndex(e => e.Spec === d.Spec) === i),
-              {fx: d => specs.indexOf(d.Spec) % 2, fy: d => Math.floor(specs.indexOf(d.Spec) / 2),
-               text: "Spec", frameAnchor: "top", fontWeight: "bold", fontSize: 12, dy: -14}),
-    Plot.ruleX(rsel, {x: "cutoff", y1: "lo95", y2: "hi95", stroke: "kind", strokeWidth: 2.5,
-               fx: d => specs.indexOf(d.Spec) % 2, fy: d => Math.floor(specs.indexOf(d.Spec) / 2)}),
-    Plot.dot(rsel, {x: "cutoff", y: "est", fill: "kind", r: 4,
-             fx: d => specs.indexOf(d.Spec) % 2, fy: d => Math.floor(specs.indexOf(d.Spec) / 2),
-             channels: {Years: d => `${d.first_year}–${d.last_year}`, n: "n", Clusters: "n_clusters",
-                        "Pre mean": d => (scale * d.mean_pre).toFixed(1), p: d => d.p.toFixed(3)},
-             tip: {format: {x: "d", fx: false, fy: false, y: d => d.toFixed(2)}}})
-  ]
-})
+estimatePlot(regPkg.filter(d => d.method === (pkgMethod.startsWith("Probit") ? "Probit" : "Linear probability")),
+  pkgJournal, {scale: 100,
+  ylabel: "Change in the share of articles with a package (percentage points)",
+  title: `Estimated change in articles with replication packages: ${pkgJournal}, ${pkgMethod.startsWith("Probit") ? "probit (average effect on articles with post = 1)" : "linear probability model"}`})
 ```
 
-Estimates, confidence intervals and sample sizes for every journal are in Tables 7–10 on [Data and methods](methods.qmd).
+Estimates, confidence intervals and sample sizes for every journal and both methods are in Tables 7 and 9 on [Methods](methods.qmd).
 
-## Reading the results
-
-**(a) Replication packages.**
+### Reading the results
 
 - Without trends, the 2019 estimate is positive. But the placebos before 2019 are just as large, so the share was already rising before the policy.
 - With journal or group trends, nothing is left at 2019.
 - P&P and JEP shares jumped around 2013–14, well before the policy.
-- JEL is the exception. Its share went from under 10% before 2019 to 20–38% from 2020 on. Its 2019 estimate is +24 points without a trend (+9, not significant, with one). The significant 2020 "placebo" puts the jump in 2020, which fits the lag between acceptance under the new policy and print publication.
+- JEL is the exception. Its share went from under 10% before 2019 to 20–38% from 2020 on. Its 2019 estimate is +24 points without a trend (+10, not significant, with one). The significant 2020 "placebo" puts the jump in 2020, which fits the lag between acceptance under the new policy and print publication.
 - AER, AEJ:Applied, AEJ:Economic Policy, and AEJ:Macro, which already had policies, were at 75–100% and flat. AEJ:Micro is lower and varies more, because many of its articles are theory papers without data.
+- The probit gives the same picture. Its average effects are within a few points of the linear probability estimates. A probit cannot be estimated for a single journal when its outcome is constant before or after the cutoff (for example, AEJ:Applied at the 2018 and 2020 placebos), so some points are missing.
 
-**(b) Time from submission to publication.**
+## Time from submission to publication
+
+```{ojs}
+//| echo: false
+viewof ttpJournal = Inputs.select(journalsIn(regTtp), {label: "Journal", value: "All journals"})
+```
+
+```{ojs}
+//| echo: false
+estimatePlot(regTtp, ttpJournal, {scale: 1,
+  ylabel: "Change in months from submission to publication",
+  title: `Estimated change in the time from submission to publication (months): ${ttpJournal}`})
+```
+
+Estimates, confidence intervals and sample sizes for every journal are in Tables 8 and 10 on [Methods](methods.qmd).
+
+### Reading the results
 
 - Without trends, the time from submission to publication is about 4 months longer after 2019. But the placebos are positive too: +4 months at 2018, before the policy, and +2 to +3 at 2020–21, after it. Times rose gradually over 2017–2022; there was no single step at 2019.
-- With journal trends, the 2019 estimate is small and not significant (+0.7 months). The 2020 and 2021 placebos stay at about +2.
+- With journal quarterly trends, the 2019 estimate is small and not significant (+0.5 months). The 2020 and 2021 placebos stay at about +2.
 - The change is no different for articles with a replication package.
 
-**Caveats.**
+:::
+
+## Caveats
 
 - The policy is a single break in time, with no untreated comparison, so trends and other changes in the same years cannot be separated from it. These include COVID, a publication backlog in 2021–22, and editorial changes.
-- For the time to publication, the years before 2019 are only 2016–18 (2018 for the AER). The trend models are therefore barely identified in the placebo samples before 2019: with three years, the 2017 and 2018 placebos are the same fit with opposite signs.
+- For the time to publication, the years before 2019 are only 2016–18 (2018 for the AER). The trend models are therefore barely identified in the placebo samples before 2019, and the 2017 and 2018 trend placebos (−4.0 and +2.0 months) should not be read as evidence either way.
 - Clusters are journal × year. With few years per journal, the confidence intervals of the single-journal estimates are approximate.

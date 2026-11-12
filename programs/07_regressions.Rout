@@ -23,7 +23,12 @@ Type 'q()' to quit R.
 > #   (a) the presence of replication packages (article level, linear probability model),
 > #   (b) the time from submission to publication (months, articles from 06_time_to_pub.R)?
 > #
-> # Specifications (OLS; standard errors clustered by journal x publication year, CR1, t with G-1 df):
+> # post is defined by year of print publication. Linear trends are in publication quarter
+> # (from the Crossref print date), centered on the first quarter of the cutoff year.
+> #
+> # Specifications (OLS; standard errors clustered by journal x publication year, CR1, t with G-1 df).
+> # For (a), each specification is also estimated as a probit; the reported effect is the average, over
+> # articles with the term = 1, of Phi(xb) - Phi(xb - b_term), with a cluster-robust delta-method SE.
 > #   its_fe     interrupted time series: y ~ post + journal fixed effects
 > #   its_trend  interrupted time series: y ~ post + journal fixed effects + journal-specific linear trends
 > #   did        (a) only. Difference in differences: journals without a data policy before 2019
@@ -140,6 +145,39 @@ Loading required package: ggpattern
 +          p=2*pt(-abs(b[[term]]/se), G-1), n=n, n_clusters=G)
 + }
 > 
+> # Probit with cluster-robust standard errors. Effect of term: average over articles with term = 1 of
+> # Phi(xb) - Phi(xb - b_term) (average effect on the treated, in probability units). Journals whose
+> # outcome does not vary in the sample are dropped (perfect prediction); returns NULL if the fit fails.
+> probit_cluster <- function(formula, data, term, cluster) {
++   vary <- data %>% group_by(Journal) %>% filter(n_distinct(y) > 1) %>% ungroup()
++   if (n_distinct(vary$Journal) == 1 && any(tapply(vary$y, vary$post, function(v) length(unique(v))) < 2))
++     return(NULL)                        # single journal: outcome constant before or after
++   if (nrow(vary) == 0) return(NULL)
++   fit <- tryCatch(suppressWarnings(glm(formula, family=binomial(link="probit"), data=vary)),
++                   error=function(e) NULL)
++   if (is.null(fit) || !fit$converged) return(NULL)
++   b <- coef(fit)
++   if (!term %in% names(b) || is.na(b[[term]])) return(NULL)
++   X <- model.matrix(fit)[, !is.na(b), drop=FALSE]
++   b <- b[!is.na(b)]
++   xb <- drop(X %*% b); p <- pnorm(xb); y <- fit$y
++   cl <- vary[[cluster]][as.integer(rownames(X))]
++   G <- length(unique(cl)); n <- nrow(X)
++   if (G < 3) return(NULL)
++   sc <- X * ((y - p) * dnorm(xb) / pmax(p*(1-p), 1e-12))
++   bread <- vcov(fit)
++   V <- (G/(G-1)) * bread %*% crossprod(rowsum(sc, cl)) %*% bread
++   on <- X[, term] == 1
++   X0 <- X[on, , drop=FALSE]; X0[, term] <- 0
++   xb1 <- xb[on]; xb0 <- drop(X0 %*% b)
++   est <- mean(pnorm(xb1) - pnorm(xb0))
++   g <- colMeans(dnorm(xb1) * X[on, , drop=FALSE] - dnorm(xb0) * X0)
++   se <- sqrt(drop(t(g) %*% V %*% g))
++   tq <- qt(0.975, G-1)
++   tibble(estimate=est, se=se, lo=est-tq*se, hi=est+tq*se,
++          p=2*pt(-abs(est/se), G-1), n=n, n_clusters=G)
++ }
+> 
 > # Samples: the actual cutoff on all years; placebo cutoffs on one side of the actual cutoff only
 > cutoffs <- bind_rows(
 +   tibble(cutoff=reg.policy.year, type="actual"),
@@ -155,18 +193,19 @@ Loading required package: ggpattern
 > 
 > # Estimate all specifications at all cutoffs. specs: named list of (formula, term) for pooled;
 > # by.journal: named list for single journals.
-> run_all <- function(df, specs, by.journal, outcome) {
+> run_all <- function(df, specs, by.journal, outcome, estimator=ols_cluster, method="OLS") {
 +   out <- list()
 +   for (i in seq_len(nrow(cutoffs))) {
 +     c0 <- cutoffs$cutoff[i]; ty <- cutoffs$type[i]
 +     d <- sample_for(df, ty) %>%
-+       mutate(post=as.integer(year >= c0), t=year - c0,
++       # trend in publication quarters, 0 = first quarter of the cutoff year
++       mutate(post=as.integer(year >= c0), t=4L*(year - c0) + (pub_quarter - 1L),
 +              cl=paste(Journal,year))
 +     yr <- range(d$year)
 +     pre.mean <- function(dd) mean(dd$y[dd$post==0])
 +     for (s in names(specs)) {
 +       dd <- if (!is.null(specs[[s]]$filter)) specs[[s]]$filter(d) else d
-+       r <- ols_cluster(specs[[s]]$formula, dd, specs[[s]]$term, "cl")
++       r <- estimator(specs[[s]]$formula, dd, specs[[s]]$term, "cl")
 +       if (!is.null(r)) out[[length(out)+1]] <- r %>%
 +         mutate(Journal="All journals", spec=s, cutoff=c0, type=ty,
 +                first_year=min(dd$year), last_year=max(dd$year), mean_pre=pre.mean(dd))
@@ -175,7 +214,7 @@ Loading required package: ggpattern
 +       dj <- d %>% filter(Journal==j)
 +       if (length(unique(dj$post)) < 2) next
 +       for (s in names(by.journal)) {
-+         r <- ols_cluster(by.journal[[s]]$formula, dj, by.journal[[s]]$term, "cl")
++         r <- estimator(by.journal[[s]]$formula, dj, by.journal[[s]]$term, "cl")
 +         if (!is.null(r)) out[[length(out)+1]] <- r %>%
 +           mutate(Journal=j, spec=s, cutoff=c0, type=ty,
 +                  first_year=min(dj$year), last_year=max(dj$year), mean_pre=pre.mean(dj))
@@ -183,10 +222,10 @@ Loading required package: ggpattern
 +     }
 +   }
 +   bind_rows(out) %>%
-+     mutate(outcome=outcome) %>%
-+     select(outcome,Journal,spec,type,cutoff,first_year,last_year,n,n_clusters,mean_pre,
++     mutate(outcome=outcome, method=method) %>%
++     select(outcome,method,Journal,spec,type,cutoff,first_year,last_year,n,n_clusters,mean_pre,
 +            estimate,se,lo,hi,p) %>%
-+     arrange(outcome,Journal,spec,cutoff)
++     arrange(outcome,method,Journal,spec,cutoff)
 + }
 > 
 > its.journal <- list(
@@ -197,11 +236,27 @@ Loading required package: ggpattern
 > # (a) Presence of a replication package
 > # ===========================
 > 
+> # publication quarter from the Crossref print date (the year is the corrected year from 04_combine.R)
+> pub.quarters <- read_csv(doi.file.csv,show_col_types=FALSE) %>%
++   distinct(doi,.keep_all=TRUE) %>%
++   transmute(doi, pub_quarter=(as.integer(substr(published.print,6,7)) - 1L) %/% 3L + 1L)
+distinct: no rows removed
+transmute: dropped 9 variables (title, year, published.print, Journal, container.title, …)
+transmute: dropped 9 variables (title, year, published.print, Journal, container.title, …)
+           new variable 'pub_quarter' (integer) with 4 unique values and 0% NA
+> 
 > articles <- read_csv(article.db.csv,show_col_types=FALSE) %>%
 +   filter(between(year,reg.pkg.firstyear,lastyear)) %>%
++   left_join(pub.quarters,by="doi") %>%
 +   mutate(y=as.numeric(has_package),
 +          newly=as.integer(Journal %in% reg.pkg.newly))
 filter: removed 3,432 rows (30%), 7,902 rows remaining
+left_join: added one column (pub_quarter)
+           > rows only in x                 0
+           > rows only in pub.quarters (3,432)
+           > matched rows               7,902
+           >                           =======
+           > rows total                 7,902
 mutate: new variable 'y' (double) with 2 unique values and 0% NA
         new variable 'newly' (integer) with 2 unique values and 0% NA
 > 
@@ -219,6 +274,23 @@ count: now 9 rows and 3 columns, ungrouped
 7 AER:Insights              0   220
 8 JEL                       1   418
 9 JEP                       1   689
+> # articles without a print month: quarter unknown, dropped from the regressions
+> articles %>% count(Journal,missing_quarter=is.na(pub_quarter)) %>% print(n=Inf)
+count: now 9 rows and 3 columns, ungrouped
+# A tibble: 9 × 3
+  Journal               missing_quarter     n
+  <chr>                 <lgl>           <int>
+1 AEA P&P               FALSE            1849
+2 AEJ:Applied Economics FALSE             702
+3 AEJ:Economic Policy   FALSE             781
+4 AEJ:Macro             FALSE             613
+5 AEJ:Micro             FALSE             727
+6 AER                   FALSE            1903
+7 AER:Insights          FALSE             220
+8 JEL                   FALSE             418
+9 JEP                   FALSE             689
+> articles <- articles %>% filter(!is.na(pub_quarter))
+filter: no rows removed
 > 
 > no.insights <- function(d) d %>% filter(!Journal %in% reg.pkg.excluded)
 > pkg.specs <- list(
@@ -229,9 +301,11 @@ count: now 9 rows and 3 columns, ungrouped
 +   did_trend = list(formula=y ~ post:newly + factor(Journal) + factor(year) + newly:t, term="post:newly",
 +                    filter=no.insights))
 > 
-> reg.pkg <- run_all(articles, pkg.specs, its.journal, "has_package")
+> reg.pkg <- bind_rows(
++   run_all(articles, pkg.specs, its.journal, "has_package", ols_cluster,    "Linear probability"),
++   run_all(articles, pkg.specs, its.journal, "has_package", probit_cluster, "Probit"))
 mutate: new variable 'post' (integer) with 2 unique values and 0% NA
-        new variable 't' (double) with 16 unique values and 0% NA
+        new variable 't' (double) with 64 unique values and 0% NA
         new variable 'cl' (character) with 135 unique values and 0% NA
 mutate: new variable 'Journal' (character) with one unique value and 0% NA
         new variable 'spec' (character) with one unique value and 0% NA
@@ -386,7 +460,7 @@ mutate: new variable 'Journal' (character) with one unique value and 0% NA
         new variable 'mean_pre' (double) with one unique value and 0% NA
 filter: removed 3,782 rows (48%), 4,120 rows remaining
 mutate: new variable 'post' (integer) with 2 unique values and 0% NA
-        new variable 't' (double) with 9 unique values and 0% NA
+        new variable 't' (double) with 36 unique values and 0% NA
         new variable 'cl' (character) with 72 unique values and 0% NA
 mutate: new variable 'Journal' (character) with one unique value and 0% NA
         new variable 'spec' (character) with one unique value and 0% NA
@@ -540,7 +614,7 @@ mutate: new variable 'Journal' (character) with one unique value and 0% NA
         new variable 'mean_pre' (double) with one unique value and 0% NA
 filter: removed 3,782 rows (48%), 4,120 rows remaining
 mutate: new variable 'post' (integer) with 2 unique values and 0% NA
-        new variable 't' (double) with 9 unique values and 0% NA
+        new variable 't' (double) with 36 unique values and 0% NA
         new variable 'cl' (character) with 72 unique values and 0% NA
 mutate: new variable 'Journal' (character) with one unique value and 0% NA
         new variable 'spec' (character) with one unique value and 0% NA
@@ -694,7 +768,7 @@ mutate: new variable 'Journal' (character) with one unique value and 0% NA
         new variable 'mean_pre' (double) with one unique value and 0% NA
 filter: removed 4,120 rows (52%), 3,782 rows remaining
 mutate: new variable 'post' (integer) with 2 unique values and 0% NA
-        new variable 't' (double) with 7 unique values and 0% NA
+        new variable 't' (double) with 28 unique values and 0% NA
         new variable 'cl' (character) with 63 unique values and 0% NA
 mutate: new variable 'Journal' (character) with one unique value and 0% NA
         new variable 'spec' (character) with one unique value and 0% NA
@@ -863,7 +937,7 @@ mutate: new variable 'Journal' (character) with one unique value and 0% NA
         new variable 'mean_pre' (double) with one unique value and 0% NA
 filter: removed 4,120 rows (52%), 3,782 rows remaining
 mutate: new variable 'post' (integer) with 2 unique values and 0% NA
-        new variable 't' (double) with 7 unique values and 0% NA
+        new variable 't' (double) with 28 unique values and 0% NA
         new variable 'cl' (character) with 63 unique values and 0% NA
 mutate: new variable 'Journal' (character) with one unique value and 0% NA
         new variable 'spec' (character) with one unique value and 0% NA
@@ -1031,76 +1105,1210 @@ mutate: new variable 'Journal' (character) with one unique value and 0% NA
         new variable 'last_year' (double) with one unique value and 0% NA
         new variable 'mean_pre' (double) with one unique value and 0% NA
 mutate: new variable 'outcome' (character) with one unique value and 0% NA
-select: columns reordered (outcome, Journal, spec, type, cutoff, …)
+        new variable 'method' (character) with one unique value and 0% NA
+select: columns reordered (outcome, method, Journal, spec, type, …)
+mutate: new variable 'post' (integer) with 2 unique values and 0% NA
+        new variable 't' (double) with 64 unique values and 0% NA
+        new variable 'cl' (character) with 135 unique values and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 220 rows (3%), 7,682 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 220 rows (3%), 7,682 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 6,053 rows (77%), 1,849 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 7,200 rows (91%), 702 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 7,121 rows (90%), 781 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 7,289 rows (92%), 613 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 7,175 rows (91%), 727 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 5,999 rows (76%), 1,903 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 7,682 rows (97%), 220 rows remaining
+filter: removed 7,484 rows (95%), 418 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 7,213 rows (91%), 689 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,782 rows (48%), 4,120 rows remaining
+mutate: new variable 'post' (integer) with 2 unique values and 0% NA
+        new variable 't' (double) with 36 unique values and 0% NA
+        new variable 'cl' (character) with 72 unique values and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: no rows removed
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: no rows removed
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,087 rows (75%), 1,033 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,766 rows (91%), 354 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,753 rows (91%), 367 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,831 rows (93%), 289 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,768 rows (91%), 352 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,017 rows (73%), 1,103 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,895 rows (95%), 225 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,723 rows (90%), 397 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,782 rows (48%), 4,120 rows remaining
+mutate: new variable 'post' (integer) with 2 unique values and 0% NA
+        new variable 't' (double) with 36 unique values and 0% NA
+        new variable 'cl' (character) with 72 unique values and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: no rows removed
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: no rows removed
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,087 rows (75%), 1,033 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,766 rows (91%), 354 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+filter: removed 3,753 rows (91%), 367 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,831 rows (93%), 289 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,768 rows (91%), 352 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,017 rows (73%), 1,103 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,895 rows (95%), 225 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,723 rows (90%), 397 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 4,120 rows (52%), 3,782 rows remaining
+mutate: new variable 'post' (integer) with 2 unique values and 0% NA
+        new variable 't' (double) with 28 unique values and 0% NA
+        new variable 'cl' (character) with 63 unique values and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 220 rows (6%), 3,562 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 220 rows (6%), 3,562 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 2,966 rows (78%), 816 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,434 rows (91%), 348 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+filter: removed 3,368 rows (89%), 414 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,458 rows (91%), 324 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,407 rows (90%), 375 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 2,982 rows (79%), 800 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,562 rows (94%), 220 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,589 rows (95%), 193 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+filter: removed 3,490 rows (92%), 292 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 4,120 rows (52%), 3,782 rows remaining
+mutate: new variable 'post' (integer) with 2 unique values and 0% NA
+        new variable 't' (double) with 28 unique values and 0% NA
+        new variable 'cl' (character) with 63 unique values and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 220 rows (6%), 3,562 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 220 rows (6%), 3,562 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 2,966 rows (78%), 816 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,434 rows (91%), 348 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,368 rows (89%), 414 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,458 rows (91%), 324 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,407 rows (90%), 375 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 2,982 rows (79%), 800 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,562 rows (94%), 220 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,589 rows (95%), 193 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+filter: removed 3,490 rows (92%), 292 rows remaining
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+group_by: one grouping variable (Journal)
+filter (grouped): no rows removed
+ungroup: no grouping variables remain
+mutate: new variable 'Journal' (character) with one unique value and 0% NA
+        new variable 'spec' (character) with one unique value and 0% NA
+        new variable 'cutoff' (integer) with one unique value and 0% NA
+        new variable 'type' (character) with one unique value and 0% NA
+        new variable 'first_year' (double) with one unique value and 0% NA
+        new variable 'last_year' (double) with one unique value and 0% NA
+        new variable 'mean_pre' (double) with one unique value and 0% NA
+mutate: new variable 'outcome' (character) with one unique value and 0% NA
+        new variable 'method' (character) with one unique value and 0% NA
+select: columns reordered (outcome, method, Journal, spec, type, …)
 > reg.pkg %>% filter(Journal=="All journals") %>% print(n=Inf,width=Inf)
-filter: removed 84 rows (81%), 20 rows remaining
-# A tibble: 20 × 15
-   outcome     Journal      spec      type             cutoff first_year
-   <chr>       <chr>        <chr>     <chr>             <int>      <dbl>
- 1 has_package All journals did       placebo (before)   2017       2010
- 2 has_package All journals did       placebo (before)   2018       2010
- 3 has_package All journals did       actual             2019       2010
- 4 has_package All journals did       placebo (after)    2020       2019
- 5 has_package All journals did       placebo (after)    2021       2019
- 6 has_package All journals did_trend placebo (before)   2017       2010
- 7 has_package All journals did_trend placebo (before)   2018       2010
- 8 has_package All journals did_trend actual             2019       2010
- 9 has_package All journals did_trend placebo (after)    2020       2019
-10 has_package All journals did_trend placebo (after)    2021       2019
-11 has_package All journals its_fe    placebo (before)   2017       2010
-12 has_package All journals its_fe    placebo (before)   2018       2010
-13 has_package All journals its_fe    actual             2019       2010
-14 has_package All journals its_fe    placebo (after)    2020       2019
-15 has_package All journals its_fe    placebo (after)    2021       2019
-16 has_package All journals its_trend placebo (before)   2017       2010
-17 has_package All journals its_trend placebo (before)   2018       2010
-18 has_package All journals its_trend actual             2019       2010
-19 has_package All journals its_trend placebo (after)    2020       2019
-20 has_package All journals its_trend placebo (after)    2021       2019
-   last_year     n n_clusters mean_pre estimate     se       lo       hi
-       <dbl> <int>      <int>    <dbl>    <dbl>  <dbl>    <dbl>    <dbl>
- 1      2018  4120         72    0.568  0.222   0.0672  0.0876   0.356  
- 2      2018  4120         72    0.574  0.235   0.0825  0.0711   0.400  
- 3      2025  7682        128    0.589  0.250   0.0472  0.157    0.344  
- 4      2025  3562         56    0.748  0.0483  0.0679 -0.0877   0.184  
- 5      2025  3562         56    0.719 -0.00506 0.0428 -0.0909   0.0808 
- 6      2018  4120         72    0.568 -0.203   0.0697 -0.342   -0.0637 
- 7      2018  4120         72    0.574 -0.113   0.0887 -0.289    0.0644 
- 8      2025  7682        128    0.589 -0.112   0.0800 -0.271    0.0461 
- 9      2025  3562         56    0.748  0.128   0.0714 -0.0147   0.272  
-10      2025  3562         56    0.719  0.0701  0.0597 -0.0494   0.190  
-11      2018  4120         72    0.568  0.0984  0.0464  0.00579  0.191  
-12      2018  4120         72    0.574  0.134   0.0642  0.00575  0.262  
-13      2025  7902        135    0.589  0.127   0.0295  0.0687   0.185  
-14      2025  3782         63    0.746 -0.0113  0.0231 -0.0576   0.0349 
-15      2025  3782         63    0.719  0.0264  0.0202 -0.0140   0.0667 
-16      2018  4120         72    0.568 -0.0957  0.0424 -0.180   -0.0112 
-17      2018  4120         72    0.574 -0.00935 0.0380 -0.0851   0.0664 
-18      2025  7902        135    0.589 -0.0609  0.0399 -0.140    0.0179 
-19      2025  3782         63    0.746 -0.0543  0.0224 -0.0992  -0.00943
-20      2025  3782         63    0.719  0.0111  0.0286 -0.0460   0.0681 
-             p
-         <dbl>
- 1 0.00153    
- 2 0.00563    
- 3 0.000000487
- 4 0.480      
- 5 0.906      
- 6 0.00485    
- 7 0.209      
- 8 0.163      
- 9 0.0776     
-10 0.245      
-11 0.0376     
-12 0.0408     
-13 0.0000318  
-14 0.626      
-15 0.196      
-16 0.0271     
-17 0.806      
-18 0.129      
-19 0.0185     
-20 0.700      
+filter: removed 162 rows (80%), 40 rows remaining
+# A tibble: 40 × 16
+   outcome     method             Journal      spec      type             cutoff
+   <chr>       <chr>              <chr>        <chr>     <chr>             <int>
+ 1 has_package Linear probability All journals did       placebo (before)   2017
+ 2 has_package Linear probability All journals did       placebo (before)   2018
+ 3 has_package Linear probability All journals did       actual             2019
+ 4 has_package Linear probability All journals did       placebo (after)    2020
+ 5 has_package Linear probability All journals did       placebo (after)    2021
+ 6 has_package Linear probability All journals did_trend placebo (before)   2017
+ 7 has_package Linear probability All journals did_trend placebo (before)   2018
+ 8 has_package Linear probability All journals did_trend actual             2019
+ 9 has_package Linear probability All journals did_trend placebo (after)    2020
+10 has_package Linear probability All journals did_trend placebo (after)    2021
+11 has_package Linear probability All journals its_fe    placebo (before)   2017
+12 has_package Linear probability All journals its_fe    placebo (before)   2018
+13 has_package Linear probability All journals its_fe    actual             2019
+14 has_package Linear probability All journals its_fe    placebo (after)    2020
+15 has_package Linear probability All journals its_fe    placebo (after)    2021
+16 has_package Linear probability All journals its_trend placebo (before)   2017
+17 has_package Linear probability All journals its_trend placebo (before)   2018
+18 has_package Linear probability All journals its_trend actual             2019
+19 has_package Linear probability All journals its_trend placebo (after)    2020
+20 has_package Linear probability All journals its_trend placebo (after)    2021
+21 has_package Probit             All journals did       placebo (before)   2017
+22 has_package Probit             All journals did       placebo (before)   2018
+23 has_package Probit             All journals did       actual             2019
+24 has_package Probit             All journals did       placebo (after)    2020
+25 has_package Probit             All journals did       placebo (after)    2021
+26 has_package Probit             All journals did_trend placebo (before)   2017
+27 has_package Probit             All journals did_trend placebo (before)   2018
+28 has_package Probit             All journals did_trend actual             2019
+29 has_package Probit             All journals did_trend placebo (after)    2020
+30 has_package Probit             All journals did_trend placebo (after)    2021
+31 has_package Probit             All journals its_fe    placebo (before)   2017
+32 has_package Probit             All journals its_fe    placebo (before)   2018
+33 has_package Probit             All journals its_fe    actual             2019
+34 has_package Probit             All journals its_fe    placebo (after)    2020
+35 has_package Probit             All journals its_fe    placebo (after)    2021
+36 has_package Probit             All journals its_trend placebo (before)   2017
+37 has_package Probit             All journals its_trend placebo (before)   2018
+38 has_package Probit             All journals its_trend actual             2019
+39 has_package Probit             All journals its_trend placebo (after)    2020
+40 has_package Probit             All journals its_trend placebo (after)    2021
+   first_year last_year     n n_clusters mean_pre estimate     se       lo
+        <dbl>     <dbl> <int>      <int>    <dbl>    <dbl>  <dbl>    <dbl>
+ 1       2010      2018  4120         72    0.568  0.222   0.0672  0.0876 
+ 2       2010      2018  4120         72    0.574  0.235   0.0825  0.0711 
+ 3       2010      2025  7682        128    0.589  0.250   0.0472  0.157  
+ 4       2019      2025  3562         56    0.748  0.0483  0.0679 -0.0877 
+ 5       2019      2025  3562         56    0.719 -0.00506 0.0428 -0.0909 
+ 6       2010      2018  4120         72    0.568 -0.199   0.0697 -0.338  
+ 7       2010      2018  4120         72    0.574 -0.111   0.0885 -0.287  
+ 8       2010      2025  7682        128    0.589 -0.111   0.0794 -0.268  
+ 9       2019      2025  3562         56    0.748  0.125   0.0713 -0.0177 
+10       2019      2025  3562         56    0.719  0.0649  0.0585 -0.0523 
+11       2010      2018  4120         72    0.568  0.0984  0.0464  0.00579
+12       2010      2018  4120         72    0.574  0.134   0.0642  0.00575
+13       2010      2025  7902        135    0.589  0.127   0.0295  0.0687 
+14       2019      2025  3782         63    0.746 -0.0113  0.0231 -0.0576 
+15       2019      2025  3782         63    0.719  0.0264  0.0202 -0.0140 
+16       2010      2018  4120         72    0.568 -0.0985  0.0421 -0.182  
+17       2010      2018  4120         72    0.574 -0.0118  0.0377 -0.0871 
+18       2010      2025  7902        135    0.589 -0.0619  0.0394 -0.140  
+19       2019      2025  3782         63    0.746 -0.0530  0.0222 -0.0974 
+20       2019      2025  3782         63    0.719  0.0121  0.0282 -0.0443 
+21       2010      2018  4120         72    0.568  0.238   0.0606  0.117  
+22       2010      2018  4120         72    0.574  0.240   0.0662  0.108  
+23       2010      2025  7682        128    0.589  0.264   0.0498  0.165  
+24       2019      2025  3562         56    0.748  0.0719  0.0738 -0.0760 
+25       2019      2025  3562         56    0.719 -0.0143  0.0448 -0.104  
+26       2010      2018  4120         72    0.568 -0.256   0.0617 -0.379  
+27       2010      2018  4120         72    0.574 -0.173   0.0644 -0.302  
+28       2010      2025  7682        128    0.589 -0.140   0.0657 -0.270  
+29       2019      2025  3562         56    0.748  0.182   0.0764  0.0291 
+30       2019      2025  3562         56    0.719  0.0758  0.0643 -0.0531 
+31       2010      2018  4120         72    0.568  0.0914  0.0407  0.0102 
+32       2010      2018  4120         72    0.574  0.125   0.0477  0.0299 
+33       2010      2025  7902        135    0.589  0.120   0.0269  0.0665 
+34       2019      2025  3782         63    0.746 -0.0152  0.0230 -0.0612 
+35       2019      2025  3782         63    0.719  0.0249  0.0202 -0.0154 
+36       2010      2018  4120         72    0.568 -0.116   0.0372 -0.190  
+37       2010      2018  4120         72    0.574 -0.0287  0.0385 -0.105  
+38       2010      2025  7902        135    0.589 -0.0671  0.0332 -0.133  
+39       2019      2025  3782         63    0.746 -0.0560  0.0209 -0.0979 
+40       2019      2025  3782         63    0.719  0.00776 0.0283 -0.0488 
+         hi           p
+      <dbl>       <dbl>
+ 1  0.356   0.00153    
+ 2  0.400   0.00563    
+ 3  0.344   0.000000487
+ 4  0.184   0.480      
+ 5  0.0808  0.906      
+ 6 -0.0597  0.00572    
+ 7  0.0656  0.215      
+ 8  0.0458  0.163      
+ 9  0.268   0.0848     
+10  0.182   0.272      
+11  0.191   0.0376     
+12  0.262   0.0408     
+13  0.185   0.0000318  
+14  0.0349  0.626      
+15  0.0667  0.196      
+16 -0.0146  0.0221     
+17  0.0635  0.756      
+18  0.0161  0.119      
+19 -0.00863 0.0200     
+20  0.0685  0.670      
+21  0.359   0.000199   
+22  0.372   0.000536   
+23  0.362   0.000000507
+24  0.220   0.334      
+25  0.0755  0.751      
+26 -0.132   0.0000943  
+27 -0.0449  0.00886    
+28 -0.00941 0.0358     
+29  0.335   0.0206     
+30  0.205   0.244      
+31  0.173   0.0279     
+32  0.220   0.0107     
+33  0.173   0.0000182  
+34  0.0307  0.510      
+35  0.0652  0.222      
+36 -0.0415  0.00271    
+37  0.0480  0.458      
+38 -0.00139 0.0454     
+39 -0.0142  0.00952    
+40  0.0643  0.785      
 > write_csv(reg.pkg, reg.packages.csv)
 > 
 > # ===========================
@@ -1108,9 +2316,12 @@ filter: removed 84 rows (81%), 20 rows remaining
 > # ===========================
 > 
 > delay <- read_csv(ttp.articles.csv,show_col_types=FALSE) %>%
-+   mutate(y=months_to_pub, has_package=as.integer(has_package))
++   filter(!is.na(pub_month)) %>%
++   mutate(y=months_to_pub, has_package=as.integer(has_package), pub_quarter=(pub_month - 1L) %/% 3L + 1L)
+filter: no rows removed
 mutate: converted 'has_package' from logical to integer (0 new NA)
         new variable 'y' (double) with 70 unique values and 0% NA
+        new variable 'pub_quarter' (double) with 4 unique values and 0% NA
 > 
 > ttp.specs <- list(
 +   its_fe    = list(formula=y ~ post + factor(Journal),                     term="post"),
@@ -1120,7 +2331,7 @@ mutate: converted 'has_package' from logical to integer (0 new NA)
 > 
 > reg.delay <- run_all(delay, ttp.specs, its.journal, "months_to_pub")
 mutate: new variable 'post' (integer) with 2 unique values and 0% NA
-        new variable 't' (double) with 9 unique values and 0% NA
+        new variable 't' (double) with 36 unique values and 0% NA
         new variable 'cl' (character) with 46 unique values and 0% NA
 mutate: new variable 'Journal' (character) with one unique value and 0% NA
         new variable 'spec' (character) with one unique value and 0% NA
@@ -1221,7 +2432,7 @@ mutate: new variable 'Journal' (character) with one unique value and 0% NA
 filter: removed 2,296 rows (93%), 186 rows remaining
 filter: removed 1,939 rows (78%), 543 rows remaining
 mutate: new variable 'post' (integer) with 2 unique values and 0% NA
-        new variable 't' (double) with 3 unique values and 0% NA
+        new variable 't' (double) with 12 unique values and 0% NA
         new variable 'cl' (character) with 12 unique values and 0% NA
 mutate: new variable 'Journal' (character) with one unique value and 0% NA
         new variable 'spec' (character) with one unique value and 0% NA
@@ -1293,7 +2504,7 @@ mutate: new variable 'Journal' (character) with one unique value and 0% NA
 filter: removed 437 rows (80%), 106 rows remaining
 filter: removed 1,939 rows (78%), 543 rows remaining
 mutate: new variable 'post' (integer) with 2 unique values and 0% NA
-        new variable 't' (double) with 3 unique values and 0% NA
+        new variable 't' (double) with 12 unique values and 0% NA
         new variable 'cl' (character) with 12 unique values and 0% NA
 mutate: new variable 'Journal' (character) with one unique value and 0% NA
         new variable 'spec' (character) with one unique value and 0% NA
@@ -1365,7 +2576,7 @@ mutate: new variable 'Journal' (character) with one unique value and 0% NA
 filter: removed 437 rows (80%), 106 rows remaining
 filter: removed 543 rows (22%), 1,939 rows remaining
 mutate: new variable 'post' (integer) with 2 unique values and 0% NA
-        new variable 't' (double) with 6 unique values and 0% NA
+        new variable 't' (double) with 24 unique values and 0% NA
         new variable 'cl' (character) with 34 unique values and 0% NA
 mutate: new variable 'Journal' (character) with one unique value and 0% NA
         new variable 'spec' (character) with one unique value and 0% NA
@@ -1480,7 +2691,7 @@ mutate: new variable 'Journal' (character) with one unique value and 0% NA
         new variable 'mean_pre' (double) with one unique value and 0% NA
 filter: removed 543 rows (22%), 1,939 rows remaining
 mutate: new variable 'post' (integer) with 2 unique values and 0% NA
-        new variable 't' (double) with 6 unique values and 0% NA
+        new variable 't' (double) with 24 unique values and 0% NA
         new variable 'cl' (character) with 34 unique values and 0% NA
 mutate: new variable 'Journal' (character) with one unique value and 0% NA
         new variable 'spec' (character) with one unique value and 0% NA
@@ -1594,58 +2805,76 @@ mutate: new variable 'Journal' (character) with one unique value and 0% NA
         new variable 'last_year' (double) with one unique value and 0% NA
         new variable 'mean_pre' (double) with one unique value and 0% NA
 mutate: new variable 'outcome' (character) with one unique value and 0% NA
-select: columns reordered (outcome, Journal, spec, type, cutoff, …)
+        new variable 'method' (character) with one unique value and 0% NA
+select: columns reordered (outcome, method, Journal, spec, type, …)
 > reg.delay %>% filter(Journal=="All journals") %>% print(n=Inf,width=Inf)
 filter: removed 46 rows (75%), 15 rows remaining
-# A tibble: 15 × 15
-   outcome       Journal      spec      type             cutoff first_year
-   <chr>         <chr>        <chr>     <chr>             <int>      <dbl>
- 1 months_to_pub All journals its_fe    placebo (before)   2017       2016
- 2 months_to_pub All journals its_fe    placebo (before)   2018       2016
- 3 months_to_pub All journals its_fe    actual             2019       2016
- 4 months_to_pub All journals its_fe    placebo (after)    2020       2019
- 5 months_to_pub All journals its_fe    placebo (after)    2021       2019
- 6 months_to_pub All journals its_trend placebo (before)   2017       2016
- 7 months_to_pub All journals its_trend placebo (before)   2018       2016
- 8 months_to_pub All journals its_trend actual             2019       2016
- 9 months_to_pub All journals its_trend placebo (after)    2020       2019
-10 months_to_pub All journals its_trend placebo (after)    2021       2019
-11 months_to_pub All journals pkg       placebo (before)   2017       2016
-12 months_to_pub All journals pkg       placebo (before)   2018       2016
-13 months_to_pub All journals pkg       actual             2019       2016
-14 months_to_pub All journals pkg       placebo (after)    2020       2019
-15 months_to_pub All journals pkg       placebo (after)    2021       2019
-   last_year     n n_clusters mean_pre estimate    se      lo    hi           p
-       <dbl> <int>      <int>    <dbl>    <dbl> <dbl>   <dbl> <dbl>       <dbl>
- 1      2018   543         12     24.5   2.11   0.984 -0.0523  4.28 0.0549     
- 2      2018   543         12     23.8   4.41   0.363  3.61    5.21 0.000000105
- 3      2024  2482         46     25.8   4.25   1.11   2.01    6.48 0.000407   
- 4      2024  1939         34     26.0   2.97   0.836  1.27    4.67 0.00118    
- 5      2024  1939         34     26.6   2.44   0.625  1.17    3.71 0.000442   
- 6      2018   543         12     24.5  -4.07   0.977 -6.22   -1.92 0.00157    
- 7      2018   543         12     23.8   4.07   0.977  1.92    6.22 0.00157    
- 8      2024  2482         46     25.8   0.677  0.881 -1.10    2.45 0.446      
- 9      2024  1939         34     26.0   2.26   0.853  0.524   4.00 0.0123     
-10      2024  1939         34     26.6   2.36   0.998  0.333   4.39 0.0239     
-11      2018   543         12     24.5   0.0644 2.01  -4.36    4.49 0.975      
-12      2018   543         12     23.8   0.660  2.67  -5.21    6.53 0.809      
-13      2024  2482         46     25.8   0.543  1.81  -3.11    4.20 0.766      
-14      2024  1939         34     26.0   1.16   1.37  -1.63    3.95 0.404      
-15      2024  1939         34     26.6   1.17   1.32  -1.51    3.84 0.381      
+# A tibble: 15 × 16
+   outcome       method Journal      spec      type             cutoff
+   <chr>         <chr>  <chr>        <chr>     <chr>             <int>
+ 1 months_to_pub OLS    All journals its_fe    placebo (before)   2017
+ 2 months_to_pub OLS    All journals its_fe    placebo (before)   2018
+ 3 months_to_pub OLS    All journals its_fe    actual             2019
+ 4 months_to_pub OLS    All journals its_fe    placebo (after)    2020
+ 5 months_to_pub OLS    All journals its_fe    placebo (after)    2021
+ 6 months_to_pub OLS    All journals its_trend placebo (before)   2017
+ 7 months_to_pub OLS    All journals its_trend placebo (before)   2018
+ 8 months_to_pub OLS    All journals its_trend actual             2019
+ 9 months_to_pub OLS    All journals its_trend placebo (after)    2020
+10 months_to_pub OLS    All journals its_trend placebo (after)    2021
+11 months_to_pub OLS    All journals pkg       placebo (before)   2017
+12 months_to_pub OLS    All journals pkg       placebo (before)   2018
+13 months_to_pub OLS    All journals pkg       actual             2019
+14 months_to_pub OLS    All journals pkg       placebo (after)    2020
+15 months_to_pub OLS    All journals pkg       placebo (after)    2021
+   first_year last_year     n n_clusters mean_pre estimate    se      lo    hi
+        <dbl>     <dbl> <int>      <int>    <dbl>    <dbl> <dbl>   <dbl> <dbl>
+ 1       2016      2018   543         12     24.5   2.11   0.984 -0.0523  4.28
+ 2       2016      2018   543         12     23.8   4.41   0.363  3.61    5.21
+ 3       2016      2024  2482         46     25.8   4.25   1.11   2.01    6.48
+ 4       2019      2024  1939         34     26.0   2.97   0.836  1.27    4.67
+ 5       2019      2024  1939         34     26.6   2.44   0.625  1.17    3.71
+ 6       2016      2018   543         12     24.5  -3.98   0.651 -5.41   -2.54
+ 7       2016      2018   543         12     23.8   2.02   1.21  -0.634   4.67
+ 8       2016      2024  2482         46     25.8   0.495  0.913 -1.34    2.33
+ 9       2019      2024  1939         34     26.0   2.14   0.900  0.310   3.97
+10       2019      2024  1939         34     26.6   2.10   0.994  0.0819  4.13
+11       2016      2018   543         12     24.5   0.0644 2.01  -4.36    4.49
+12       2016      2018   543         12     23.8   0.660  2.67  -5.21    6.53
+13       2016      2024  2482         46     25.8   0.543  1.81  -3.11    4.20
+14       2019      2024  1939         34     26.0   1.16   1.37  -1.63    3.95
+15       2019      2024  1939         34     26.6   1.17   1.32  -1.51    3.84
+             p
+         <dbl>
+ 1 0.0549     
+ 2 0.000000105
+ 3 0.000407   
+ 4 0.00118    
+ 5 0.000442   
+ 6 0.0000770  
+ 7 0.122      
+ 8 0.590      
+ 9 0.0233     
+10 0.0419     
+11 0.975      
+12 0.809      
+13 0.766      
+14 0.404      
+15 0.381      
 > write_csv(reg.delay, reg.ttp.csv)
 > 
 > # ===========================
 > # Figure: estimates at the actual and the placebo implementation years (pooled)
 > # ===========================
 > 
-> spec.labels <- c(its_fe="Journal FE",its_trend="Journal FE + journal trends",
-+                  did="DiD: P&P, JEL, JEP vs AER, AEJs (year FE)",did_trend="DiD with group trends",
+> spec.labels <- c(its_fe="Journal FE",its_trend="Journal FE + journal quarterly trends",
++                  did="DiD: P&P, JEL, JEP vs AER, AEJs (year FE)",did_trend="DiD with group quarterly trends",
 +                  pkg="With vs without a package (post x package)")
 > col.actual  <- "#C2611F"
 > col.placebo <- "#2F6DB5"
 > 
 > fig_placebo <- function(r, title, ylab, file, scale=1) {
-+   df <- r %>% filter(Journal=="All journals") %>%
++   df <- r %>% filter(Journal=="All journals", method %in% c("OLS","Linear probability")) %>%
 +     mutate(spec=factor(spec.labels[spec],levels=spec.labels),
 +            kind=if_else(type=="actual","Actual (published 2019 and later)","Placebo"),
 +            across(c(estimate,lo,hi),~ .x*scale))
@@ -1672,15 +2901,15 @@ filter: removed 46 rows (75%), 15 rows remaining
 +   p
 + }
 > 
-> fig_placebo(reg.pkg,"Replication packages: effect of the 2019 policy, actual and placebo years",
+> fig_placebo(reg.pkg,"Estimated change in articles with replication packages (linear probability model)",
 +             "Change in share with a package (percentage points)","figure_regressions_packages",scale=100)
-filter: removed 84 rows (81%), 20 rows remaining
+filter: removed 182 rows (90%), 20 rows remaining
 mutate: converted 'spec' from character to factor (0 new NA)
         changed 20 values (100%) of 'estimate' (0 new NAs)
         changed 20 values (100%) of 'lo' (0 new NAs)
         changed 20 values (100%) of 'hi' (0 new NAs)
         new variable 'kind' (character) with 2 unique values and 0% NA
-> fig_placebo(reg.delay,"Time from submission to publication: effect of the 2019 policy, actual and placebo years",
+> fig_placebo(reg.delay,"Estimated change in the time from submission to publication",
 +             "Change in time to publication (months)","figure_regressions_time_to_pub")
 filter: removed 46 rows (75%), 15 rows remaining
 mutate: converted 'spec' from character to factor (0 new NA)
@@ -1688,4 +2917,4 @@ mutate: converted 'spec' from character to factor (0 new NA)
 > 
 > proc.time()
    user  system elapsed 
-  7.814   0.787   7.743 
+ 17.920  11.355  10.733 

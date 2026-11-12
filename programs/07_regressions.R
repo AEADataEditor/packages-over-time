@@ -2,7 +2,12 @@
 #   (a) the presence of replication packages (article level, linear probability model),
 #   (b) the time from submission to publication (months, articles from 06_time_to_pub.R)?
 #
-# Specifications (OLS; standard errors clustered by journal x publication year, CR1, t with G-1 df):
+# post is defined by year of print publication. Linear trends are in publication quarter
+# (from the Crossref print date), centered on the first quarter of the cutoff year.
+#
+# Specifications (OLS; standard errors clustered by journal x publication year, CR1, t with G-1 df).
+# For (a), each specification is also estimated as a probit; the reported effect is the average, over
+# articles with the term = 1, of Phi(xb) - Phi(xb - b_term), with a cluster-robust delta-method SE.
 #   its_fe     interrupted time series: y ~ post + journal fixed effects
 #   its_trend  interrupted time series: y ~ post + journal fixed effects + journal-specific linear trends
 #   did        (a) only. Difference in differences: journals without a data policy before 2019
@@ -45,6 +50,39 @@ ols_cluster <- function(formula, data, term, cluster) {
          p=2*pt(-abs(b[[term]]/se), G-1), n=n, n_clusters=G)
 }
 
+# Probit with cluster-robust standard errors. Effect of term: average over articles with term = 1 of
+# Phi(xb) - Phi(xb - b_term) (average effect on the treated, in probability units). Journals whose
+# outcome does not vary in the sample are dropped (perfect prediction); returns NULL if the fit fails.
+probit_cluster <- function(formula, data, term, cluster) {
+  vary <- data %>% group_by(Journal) %>% filter(n_distinct(y) > 1) %>% ungroup()
+  if (n_distinct(vary$Journal) == 1 && any(tapply(vary$y, vary$post, function(v) length(unique(v))) < 2))
+    return(NULL)                        # single journal: outcome constant before or after
+  if (nrow(vary) == 0) return(NULL)
+  fit <- tryCatch(suppressWarnings(glm(formula, family=binomial(link="probit"), data=vary)),
+                  error=function(e) NULL)
+  if (is.null(fit) || !fit$converged) return(NULL)
+  b <- coef(fit)
+  if (!term %in% names(b) || is.na(b[[term]])) return(NULL)
+  X <- model.matrix(fit)[, !is.na(b), drop=FALSE]
+  b <- b[!is.na(b)]
+  xb <- drop(X %*% b); p <- pnorm(xb); y <- fit$y
+  cl <- vary[[cluster]][as.integer(rownames(X))]
+  G <- length(unique(cl)); n <- nrow(X)
+  if (G < 3) return(NULL)
+  sc <- X * ((y - p) * dnorm(xb) / pmax(p*(1-p), 1e-12))
+  bread <- vcov(fit)
+  V <- (G/(G-1)) * bread %*% crossprod(rowsum(sc, cl)) %*% bread
+  on <- X[, term] == 1
+  X0 <- X[on, , drop=FALSE]; X0[, term] <- 0
+  xb1 <- xb[on]; xb0 <- drop(X0 %*% b)
+  est <- mean(pnorm(xb1) - pnorm(xb0))
+  g <- colMeans(dnorm(xb1) * X[on, , drop=FALSE] - dnorm(xb0) * X0)
+  se <- sqrt(drop(t(g) %*% V %*% g))
+  tq <- qt(0.975, G-1)
+  tibble(estimate=est, se=se, lo=est-tq*se, hi=est+tq*se,
+         p=2*pt(-abs(est/se), G-1), n=n, n_clusters=G)
+}
+
 # Samples: the actual cutoff on all years; placebo cutoffs on one side of the actual cutoff only
 cutoffs <- bind_rows(
   tibble(cutoff=reg.policy.year, type="actual"),
@@ -60,18 +98,19 @@ sample_for <- function(df, type) {
 
 # Estimate all specifications at all cutoffs. specs: named list of (formula, term) for pooled;
 # by.journal: named list for single journals.
-run_all <- function(df, specs, by.journal, outcome) {
+run_all <- function(df, specs, by.journal, outcome, estimator=ols_cluster, method="OLS") {
   out <- list()
   for (i in seq_len(nrow(cutoffs))) {
     c0 <- cutoffs$cutoff[i]; ty <- cutoffs$type[i]
     d <- sample_for(df, ty) %>%
-      mutate(post=as.integer(year >= c0), t=year - c0,
+      # trend in publication quarters, 0 = first quarter of the cutoff year
+      mutate(post=as.integer(year >= c0), t=4L*(year - c0) + (pub_quarter - 1L),
              cl=paste(Journal,year))
     yr <- range(d$year)
     pre.mean <- function(dd) mean(dd$y[dd$post==0])
     for (s in names(specs)) {
       dd <- if (!is.null(specs[[s]]$filter)) specs[[s]]$filter(d) else d
-      r <- ols_cluster(specs[[s]]$formula, dd, specs[[s]]$term, "cl")
+      r <- estimator(specs[[s]]$formula, dd, specs[[s]]$term, "cl")
       if (!is.null(r)) out[[length(out)+1]] <- r %>%
         mutate(Journal="All journals", spec=s, cutoff=c0, type=ty,
                first_year=min(dd$year), last_year=max(dd$year), mean_pre=pre.mean(dd))
@@ -80,7 +119,7 @@ run_all <- function(df, specs, by.journal, outcome) {
       dj <- d %>% filter(Journal==j)
       if (length(unique(dj$post)) < 2) next
       for (s in names(by.journal)) {
-        r <- ols_cluster(by.journal[[s]]$formula, dj, by.journal[[s]]$term, "cl")
+        r <- estimator(by.journal[[s]]$formula, dj, by.journal[[s]]$term, "cl")
         if (!is.null(r)) out[[length(out)+1]] <- r %>%
           mutate(Journal=j, spec=s, cutoff=c0, type=ty,
                  first_year=min(dj$year), last_year=max(dj$year), mean_pre=pre.mean(dj))
@@ -88,10 +127,10 @@ run_all <- function(df, specs, by.journal, outcome) {
     }
   }
   bind_rows(out) %>%
-    mutate(outcome=outcome) %>%
-    select(outcome,Journal,spec,type,cutoff,first_year,last_year,n,n_clusters,mean_pre,
+    mutate(outcome=outcome, method=method) %>%
+    select(outcome,method,Journal,spec,type,cutoff,first_year,last_year,n,n_clusters,mean_pre,
            estimate,se,lo,hi,p) %>%
-    arrange(outcome,Journal,spec,cutoff)
+    arrange(outcome,method,Journal,spec,cutoff)
 }
 
 its.journal <- list(
@@ -102,12 +141,21 @@ its.journal <- list(
 # (a) Presence of a replication package
 # ===========================
 
+# publication quarter from the Crossref print date (the year is the corrected year from 04_combine.R)
+pub.quarters <- read_csv(doi.file.csv,show_col_types=FALSE) %>%
+  distinct(doi,.keep_all=TRUE) %>%
+  transmute(doi, pub_quarter=(as.integer(substr(published.print,6,7)) - 1L) %/% 3L + 1L)
+
 articles <- read_csv(article.db.csv,show_col_types=FALSE) %>%
   filter(between(year,reg.pkg.firstyear,lastyear)) %>%
+  left_join(pub.quarters,by="doi") %>%
   mutate(y=as.numeric(has_package),
          newly=as.integer(Journal %in% reg.pkg.newly))
 
 articles %>% count(Journal,newly)
+# articles without a print month: quarter unknown, dropped from the regressions
+articles %>% count(Journal,missing_quarter=is.na(pub_quarter)) %>% print(n=Inf)
+articles <- articles %>% filter(!is.na(pub_quarter))
 
 no.insights <- function(d) d %>% filter(!Journal %in% reg.pkg.excluded)
 pkg.specs <- list(
@@ -118,7 +166,9 @@ pkg.specs <- list(
   did_trend = list(formula=y ~ post:newly + factor(Journal) + factor(year) + newly:t, term="post:newly",
                    filter=no.insights))
 
-reg.pkg <- run_all(articles, pkg.specs, its.journal, "has_package")
+reg.pkg <- bind_rows(
+  run_all(articles, pkg.specs, its.journal, "has_package", ols_cluster,    "Linear probability"),
+  run_all(articles, pkg.specs, its.journal, "has_package", probit_cluster, "Probit"))
 reg.pkg %>% filter(Journal=="All journals") %>% print(n=Inf,width=Inf)
 write_csv(reg.pkg, reg.packages.csv)
 
@@ -127,7 +177,8 @@ write_csv(reg.pkg, reg.packages.csv)
 # ===========================
 
 delay <- read_csv(ttp.articles.csv,show_col_types=FALSE) %>%
-  mutate(y=months_to_pub, has_package=as.integer(has_package))
+  filter(!is.na(pub_month)) %>%
+  mutate(y=months_to_pub, has_package=as.integer(has_package), pub_quarter=(pub_month - 1L) %/% 3L + 1L)
 
 ttp.specs <- list(
   its_fe    = list(formula=y ~ post + factor(Journal),                     term="post"),
@@ -143,14 +194,14 @@ write_csv(reg.delay, reg.ttp.csv)
 # Figure: estimates at the actual and the placebo implementation years (pooled)
 # ===========================
 
-spec.labels <- c(its_fe="Journal FE",its_trend="Journal FE + journal trends",
-                 did="DiD: P&P, JEL, JEP vs AER, AEJs (year FE)",did_trend="DiD with group trends",
+spec.labels <- c(its_fe="Journal FE",its_trend="Journal FE + journal quarterly trends",
+                 did="DiD: P&P, JEL, JEP vs AER, AEJs (year FE)",did_trend="DiD with group quarterly trends",
                  pkg="With vs without a package (post x package)")
 col.actual  <- "#C2611F"
 col.placebo <- "#2F6DB5"
 
 fig_placebo <- function(r, title, ylab, file, scale=1) {
-  df <- r %>% filter(Journal=="All journals") %>%
+  df <- r %>% filter(Journal=="All journals", method %in% c("OLS","Linear probability")) %>%
     mutate(spec=factor(spec.labels[spec],levels=spec.labels),
            kind=if_else(type=="actual","Actual (published 2019 and later)","Placebo"),
            across(c(estimate,lo,hi),~ .x*scale))
@@ -177,7 +228,7 @@ fig_placebo <- function(r, title, ylab, file, scale=1) {
   p
 }
 
-fig_placebo(reg.pkg,"Replication packages: effect of the 2019 policy, actual and placebo years",
+fig_placebo(reg.pkg,"Estimated change in articles with replication packages (linear probability model)",
             "Change in share with a package (percentage points)","figure_regressions_packages",scale=100)
-fig_placebo(reg.delay,"Time from submission to publication: effect of the 2019 policy, actual and placebo years",
+fig_placebo(reg.delay,"Estimated change in the time from submission to publication",
             "Change in time to publication (months)","figure_regressions_time_to_pub")

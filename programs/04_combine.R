@@ -171,6 +171,18 @@ all.packages <- bind_rows(migration,datacite,references,titles) %>%
   group_by(doi,package) %>%
   summarize(source = paste(sort(unique(source)),collapse="+"), .groups="drop")
 
+# Migrated supplements without a recorded openICPSR DOI get a placeholder id ("migration:<article doi>").
+# Many were migrated later and are found through DataCite or the title, with a real DOI that is not yet
+# in the migration file. A package with a real DOI takes precedence: drop the placeholder for those
+# articles (otherwise the same package is counted twice). Keep it only when it is the only evidence.
+all.packages %>% filter(startsWith(package,"migration:")) %>%
+  mutate(has_real = doi %in% all.packages$doi[!startsWith(all.packages$package,"migration:")]) %>%
+  count(has_real)
+all.packages <- all.packages %>%
+  group_by(doi) %>%
+  filter(!(startsWith(package,"migration:") & any(!startsWith(package,"migration:")))) %>%
+  ungroup()
+
 all.packages %>% count(source,sort=TRUE)
 
 # Attach article information. A package linked to several articles (rare)

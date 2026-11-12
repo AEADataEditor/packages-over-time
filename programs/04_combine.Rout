@@ -98,6 +98,7 @@ The following object is masked from ‘package:purrr’:
 
     discard
 
+Loading required package: ggpattern
 > source(file.path(programs,"config.R"), echo=FALSE)
 > 
 > # filenames in config.R
@@ -108,7 +109,7 @@ The following object is masked from ‘package:purrr’:
 > 
 > new.df <- readRDS(crossref.raw.Rds)
 > nrow(new.df)
-[1] 19901
+[1] 20984
 > 
 > # Front matter and editorial/administrative content that is not a research article.
 > # Most of these have no authors; the title patterns catch the ones that do.
@@ -138,6 +139,16 @@ The following object is masked from ‘package:purrr’:
 +                       "data and code availability policy",
 +                       "^note from the aea")
 > 
+> # The May issue of the AER was the Papers & Proceedings until 2017 (volume 107);
+> # since 2018 the P&P is a separate journal. Identify those articles by volume and issue.
+> is_pp_in_aer <- function(Journal,volume,issue) {
++   vol.n <- suppressWarnings(as.integer(volume))
++   Journal=="AER" & !is.na(vol.n) & !is.na(issue) &
++     ((between(vol.n,89,100) & issue=="2") |
++      (between(vol.n,101,103) & issue=="3") |
++      (between(vol.n,104,107) & issue=="5"))
++ }
+> 
 > new.df %>%
 +   distinct(doi,.keep_all=TRUE) %>%
 +   mutate(doi = tolower(doi),
@@ -150,8 +161,8 @@ The following object is masked from ‘package:purrr’:
 +          bookreview  = str_detect(doi,"\\.r\\d+$"),
 +          # frontmatter DOIs end in "i"
 +          frontmatter = str_sub(doi, start= -1)=="i") -> crossref.df
-distinct: removed 5,901 rows (30%), 14,000 rows remaining
-mutate: new variable 'title.clean' (character) with 11,556 unique values and 1% NA
+distinct: removed 5,901 rows (28%), 15,083 rows remaining
+mutate: new variable 'title.clean' (character) with 12,393 unique values and 1% NA
         new variable 'no.author' (logical) with 2 unique values and 0% NA
         new variable 'editorial' (logical) with 3 unique values and 1% NA
         new variable 'bookreview' (logical) with 2 unique values and 0% NA
@@ -167,7 +178,7 @@ mutate: new variable 'title.clean' (character) with 11,556 unique values and 1% 
 +             bookreview=sum(bookreview))
 summarize: now one row and 6 columns, ungrouped
   total not_article frontmatter no.author editorial bookreview
-1 14000          79         595      2406        NA        877
+1 15083          79         654      2571        NA        904
 > 
 > crossref.df %>%
 +   filter(type=="journal-article") %>%
@@ -188,33 +199,47 @@ summarize: now one row and 6 columns, ungrouped
 +                                      "AEA Papers and Proceedings"="AEA P&P")),
 +          Journal = if_else(Journal=="AEJ:Macroeconomics","AEJ:Macro",Journal),
 +          Journal = if_else(Journal=="AEJ:Microeconomics","AEJ:Micro",Journal)) %>%
++   # A few Crossref print dates disagree with the volume (e.g., aer.89.1.249, dated 1996).
++   # For journals with annual volumes, take the year from the volume.
++   mutate(vol.year = case_when(Journal=="AER" ~ suppressWarnings(as.integer(volume)) + 1910L,
++                               Journal=="JEL" ~ suppressWarnings(as.integer(volume)) + 1962L,
++                               Journal=="JEP" ~ suppressWarnings(as.integer(volume)) + 1986L,
++                               TRUE           ~ NA_integer_),
++          year = coalesce(vol.year,year)) %>%
 +   filter(year >= firstyear) %>%
-+   select(doi,title,year,published.print,Journal,container.title,volume,issue,page) -> articles
-filter: removed 79 rows (1%), 13,921 rows remaining
-filter: removed 595 rows (4%), 13,326 rows remaining
-filter: removed 1,759 rows (13%), 11,567 rows remaining
-filter: removed 348 rows (3%), 11,219 rows remaining
-filter: removed 116 rows (1%), 11,103 rows remaining
++   mutate(pp_in_aer = is_pp_in_aer(Journal,volume,issue)) %>%
++   select(doi,title,year,published.print,Journal,container.title,volume,issue,page,pp_in_aer) -> articles
+filter: removed 79 rows (1%), 15,004 rows remaining
+filter: removed 654 rows (4%), 14,350 rows remaining
+filter: removed 1,865 rows (13%), 12,485 rows remaining
+filter: removed 438 rows (4%), 12,047 rows remaining
+filter: removed 116 rows (1%), 11,931 rows remaining
 filter: no rows removed
-mutate: new variable 'year' (integer) with 27 unique values and 0% NA
+mutate: new variable 'year' (integer) with 40 unique values and 0% NA
         new variable 'Journal' (character) with 9 unique values and 0% NA
-filter: no rows removed
-select: dropped 9 variables (issued, type, author, issn, title.clean, …)
+mutate: new variable 'vol.year' (integer) with 41 unique values and 37% NA
+filter: removed 597 rows (5%), 11,334 rows remaining
+mutate: new variable 'pp_in_aer' (logical) with 2 unique values and 0% NA
+select: dropped 10 variables (issued, type, author, issn, title.clean, …)
+> 
+> articles <- articles %>% as_tibble() %>% arrange(year,Journal,doi)
 > 
 > nrow(articles)
-[1] 11103
+[1] 11334
 > articles %>% count(Journal)
 count: now 9 rows and 2 columns, ungrouped
-                Journal    n
-1               AEA P&P 1048
-2 AEJ:Applied Economics  781
-3   AEJ:Economic Policy  842
-4             AEJ:Macro  686
-5             AEJ:Micro  786
-6                   AER 4861
-7          AER:Insights  244
-8                   JEL  653
-9                   JEP 1202
+# A tibble: 9 × 2
+  Journal                   n
+  <chr>                 <int>
+1 AEA P&P                1048
+2 AEJ:Applied Economics   781
+3 AEJ:Economic Policy     842
+4 AEJ:Macro               686
+5 AEJ:Micro               786
+6 AER                    5020
+7 AER:Insights            244
+8 JEL                     667
+9 JEP                    1260
 > 
 > saveRDS(articles, file= doi.file.Rds)
 > write_csv(articles, file= doi.file.csv)
@@ -273,10 +298,10 @@ distinct: removed 16,318 rows (79%), 4,443 rows remaining
 +   add_count(title.norm,name="n.title") %>%
 +   filter(n.title == 1, nchar(title.norm) >= 20) %>%
 +   select(doi,year,title.norm)
-mutate: new variable 'title.norm' (character) with 11,009 unique values and 0% NA
+mutate: new variable 'title.norm' (character) with 11,234 unique values and 0% NA
 add_count: new variable 'n.title' (integer) with 5 unique values and 0% NA
-filter: removed 401 rows (4%), 10,702 rows remaining
-select: dropped 8 variables (title, published.print, Journal, container.title, volume, …)
+filter: removed 412 rows (4%), 10,922 rows remaining
+select: dropped 9 variables (title, published.print, Journal, container.title, volume, …)
 > 
 > # Articles cite their own replication package in their references.
 > # Keep references to openICPSR deposits whose text contains the article's own title
@@ -289,7 +314,7 @@ select: dropped 8 variables (title, published.print, Journal, container.title, v
 +   distinct()
 inner_join: added 2 columns (year, title.norm)
             > rows only in x               (   48)
-            > rows only in articles.titles (9,200)
+            > rows only in articles.titles (9,420)
             > matched rows                  1,651
             >                              =======
             > rows total                    1,651
@@ -321,17 +346,17 @@ dbl (1): publicationYear
 mutate: new variable 'title.norm' (character) with 6,645 unique values and <1% NA
 distinct: removed 7,152 rows (51%), 6,839 rows remaining
 inner_join: added 2 columns (doi, year)
-            > rows only in x               (1,245)
-            > rows only in articles.titles (5,224)
-            > matched rows                  5,594
+            > rows only in x               (1,244)
+            > rows only in articles.titles (5,443)
+            > matched rows                  5,595
             >                              =======
-            > rows total                    5,594
-filter: removed 69 rows (1%), 5,525 rows remaining
+            > rows total                    5,595
+filter: removed 69 rows (1%), 5,526 rows remaining
 transmute: dropped 4 variables (icpsr_project, title.norm, publicationYear, year)
 transmute: dropped 4 variables (icpsr_project, title.norm, publicationYear, year)
-           new variable 'package' (character) with 5,467 unique values and 0% NA
+           new variable 'package' (character) with 5,468 unique values and 0% NA
            new variable 'source' (character) with one unique value and 0% NA
-distinct: removed 58 rows (1%), 5,467 rows remaining
+distinct: removed 58 rows (1%), 5,468 rows remaining
 > 
 > all.packages <- bind_rows(migration,datacite,references,titles) %>%
 +   group_by(doi,package) %>%
@@ -339,21 +364,42 @@ distinct: removed 58 rows (1%), 5,467 rows remaining
 group_by: 2 grouping variables (doi, package)
 summarize: now 6,247 rows and 3 columns, ungrouped
 > 
+> # Migrated supplements without a recorded openICPSR DOI get a placeholder id ("migration:<article doi>").
+> # Many were migrated later and are found through DataCite or the title, with a real DOI that is not yet
+> # in the migration file. A package with a real DOI takes precedence: drop the placeholder for those
+> # articles (otherwise the same package is counted twice). Keep it only when it is the only evidence.
+> all.packages %>% filter(startsWith(package,"migration:")) %>%
++   mutate(has_real = doi %in% all.packages$doi[!startsWith(all.packages$package,"migration:")]) %>%
++   count(has_real)
+filter: removed 6,026 rows (96%), 221 rows remaining
+mutate: new variable 'has_real' (logical) with one unique value and 0% NA
+count: now one row and 2 columns, ungrouped
+# A tibble: 1 × 2
+  has_real     n
+  <lgl>    <int>
+1 TRUE       221
+> all.packages <- all.packages %>%
++   group_by(doi) %>%
++   filter(!(startsWith(package,"migration:") & any(!startsWith(package,"migration:")))) %>%
++   ungroup()
+group_by: one grouping variable (doi)
+filter (grouped): removed 221 rows (4%), 6,026 rows remaining (removed 0 groups, 5,936 groups remaining)
+ungroup: no grouping variables remain
+> 
 > all.packages %>% count(source,sort=TRUE)
-count: now 10 rows and 2 columns, ungrouped
-# A tibble: 10 × 2
-   source                       n
-   <chr>                    <int>
- 1 datacite+migration+title  2494
- 2 datacite+title            1238
- 3 reference+title            717
- 4 title                      673
- 5 datacite+reference+title   345
- 6 datacite                   239
- 7 migration                  221
- 8 reference                  193
- 9 datacite+reference          70
-10 datacite+migration          57
+count: now 9 rows and 2 columns, ungrouped
+# A tibble: 9 × 2
+  source                       n
+  <chr>                    <int>
+1 datacite+migration+title  2495
+2 datacite+title            1238
+3 reference+title            717
+4 title                      673
+5 datacite+reference+title   345
+6 datacite                   239
+7 reference                  193
+8 datacite+reference          70
+9 datacite+migration          56
 > 
 > # Attach article information. A package linked to several articles (rare)
 > # is counted once, with its earliest article.
@@ -361,26 +407,26 @@ count: now 10 rows and 2 columns, ungrouped
 +   inner_join(articles %>% select(doi,year,Journal),by="doi") %>%
 +   arrange(package,year,doi) %>%
 +   distinct(package,.keep_all=TRUE)
-select: dropped 6 variables (title, published.print, container.title, volume, issue, …)
+select: dropped 7 variables (title, published.print, container.title, volume, issue, …)
 inner_join: added 2 columns (year, Journal)
-            > rows only in x                         (   14)
-            > rows only in articles %>% select(doi.. (5,181)
-            > matched rows                            6,233
+            > rows only in x                         (   13)
+            > rows only in articles %>% select(doi.. (5,411)
+            > matched rows                            6,013
             >                                        =======
-            > rows total                              6,233
-distinct: removed 31 rows (<1%), 6,202 rows remaining
+            > rows total                              6,013
+distinct: removed 31 rows (1%), 5,982 rows remaining
 > 
 > # How many package-article links do not match a research article in scope?
 > all.packages %>% anti_join(articles,by="doi") %>% nrow()
 anti_join: added no columns
-           > rows only in x            14
-           > rows only in articles (5,181)
-           > matched rows          (6,233)
+           > rows only in x            13
+           > rows only in articles (5,411)
+           > matched rows          (6,013)
            >                       =======
-           > rows total                14
-[1] 14
+           > rows total                13
+[1] 13
 > nrow(packages)
-[1] 6202
+[1] 5982
 > 
 > saveRDS(packages,file=packages.Rds)
 > write_csv(packages,file=packages.csv)
@@ -392,14 +438,14 @@ anti_join: added no columns
 > articles.flagged <- articles %>%
 +   left_join(packages %>% count(doi,name="n_packages"),by="doi") %>%
 +   mutate(n_packages = coalesce(n_packages,0L))
-count: now 5,902 rows and 2 columns, ungrouped
+count: now 5,903 rows and 2 columns, ungrouped
 left_join: added one column (n_packages)
-           > rows only in x                           5,201
+           > rows only in x                           5,431
            > rows only in packages %>% count(doi,.. (     0)
-           > matched rows                             5,902
+           > matched rows                             5,903
            >                                        ========
-           > rows total                              11,103
-mutate: changed 5,201 values (47%) of 'n_packages' (5,201 fewer NAs)
+           > rows total                              11,334
+mutate: changed 5,431 values (48%) of 'n_packages' (5,431 fewer NAs)
 > 
 > tabulate <- function(df, ...) {
 +   df %>%
@@ -413,48 +459,148 @@ mutate: changed 5,201 values (47%) of 'n_packages' (5,201 fewer NAs)
 > 
 > by.year    <- tabulate(articles.flagged, year)
 group_by: one grouping variable (year)
-summarize: now 27 rows and 4 columns, ungrouped
+summarize: now 28 rows and 4 columns, ungrouped
 mutate: new variable 'pct_with_package' (double) with 26 unique values and 0% NA
 > by.journal <- tabulate(articles.flagged, Journal, year)
 group_by: 2 grouping variables (Journal, year)
-summarize: now 170 rows and 5 columns, ungrouped
-mutate: new variable 'pct_with_package' (double) with 117 unique values and 0% NA
+summarize: now 173 rows and 5 columns, ungrouped
+mutate: new variable 'pct_with_package' (double) with 118 unique values and 0% NA
+> 
+> # Same, with the P&P articles that were printed in the May AER attributed to the P&P
+> by.journal.pp <- articles.flagged %>%
++   mutate(Journal = if_else(pp_in_aer,"AEA P&P",Journal)) %>%
++   tabulate(Journal,year,pp_in_aer)
+mutate: changed 1,890 values (17%) of 'Journal' (0 new NAs)
+group_by: 3 grouping variables (Journal, year, pp_in_aer)
+summarize: now 192 rows and 6 columns, ungrouped
+mutate: new variable 'pct_with_package' (double) with 126 unique values and 0% NA
 > 
 > by.year %>% print(n=Inf)
-# A tibble: 27 × 5
+# A tibble: 28 × 5
     year articles articles_with_package packages pct_with_package
    <int>    <int>                 <int>    <int>            <dbl>
- 1  2000      258                     1        1              0.4
- 2  2001      260                     0        0              0  
- 3  2002      261                     3        3              1.1
- 4  2003      260                     0        0              0  
- 5  2004      247                    16       20              6.5
- 6  2005      248                    57       58             23  
- 7  2006      280                    57       58             20.4
- 8  2007      287                    58       59             20.2
- 9  2008      254                    55       56             21.7
-10  2009      367                   144      145             39.2
-11  2010      433                   179      183             41.3
-12  2011      443                   215      220             48.5
-13  2012      444                   221      227             49.8
-14  2013      431                   235      240             54.5
-15  2014      472                   331      339             70.1
-16  2015      463                   315      323             68  
-17  2016      471                   296      304             62.8
-18  2017      497                   305      316             61.4
-19  2018      466                   330      348             70.8
-20  2019      497                   371      431             74.6
-21  2020      491                   339      456             69  
-22  2021      527                   392      400             74.4
-23  2022      592                   395      405             66.7
-24  2023      570                   427      435             74.9
-25  2024      570                   434      441             76.1
-26  2025      535                   400      405             74.8
-27  2026      479                   326      329             68.1
+ 1  1999      231                     1        1              0.4
+ 2  2000      258                     1        1              0.4
+ 3  2001      260                     0        0              0  
+ 4  2002      261                     3        3              1.1
+ 5  2003      260                     0        0              0  
+ 6  2004      247                    16       18              6.5
+ 7  2005      248                    57       57             23  
+ 8  2006      280                    57       57             20.4
+ 9  2007      287                    58       58             20.2
+10  2008      254                    55       55             21.7
+11  2009      367                   144      145             39.2
+12  2010      433                   179      179             41.3
+13  2011      443                   215      215             48.5
+14  2012      444                   221      225             49.8
+15  2013      431                   235      237             54.5
+16  2014      472                   331      333             70.1
+17  2015      463                   315      318             68  
+18  2016      471                   296      298             62.8
+19  2017      497                   305      311             61.4
+20  2018      466                   330      336             70.8
+21  2019      497                   371      378             74.6
+22  2020      491                   339      342             69  
+23  2021      527                   392      400             74.4
+24  2022      592                   395      405             66.7
+25  2023      570                   427      435             74.9
+26  2024      570                   434      441             76.1
+27  2025      535                   400      405             74.8
+28  2026      479                   326      329             68.1
 > 
 > write_csv(by.year,   file=by_year.csv)
 > write_csv(by.journal,file=by_journal.csv)
+> write_csv(by.journal.pp,file=by_journal_pp.csv)
+> 
+> # ===========================
+> # Article-level database, with data-policy flags
+> # ===========================
+> # Policy years by journal (policy.year) are defined in config.R.
+> # Policy status is determined by the journal an article is attributed to,
+> # after moving the P&P articles printed in the May AER to AEA P&P.
+> 
+> policy.period <- function(year) {
++   # policy changes: 2005 (AER data policy), 2009 (AEJs launched), 2019 (AEA-wide policy)
++   cut(year,breaks=c(-Inf,2004,2008,2018,Inf),labels=c("pre-2005","2005-2008","2009-2018","2019 and later"))
++ }
+> 
+> article.db <- articles.flagged %>%
++   mutate(Journal.published = Journal,
++          Journal           = if_else(pp_in_aer,"AEA P&P",Journal),
++          policy_year       = policy.year(Journal),
++          under_policy      = year >= policy_year,
++          has_package       = n_packages > 0,
++          period            = policy.period(year)) %>%
++   select(doi,title,year,Journal,Journal.published,pp_in_aer,volume,issue,page,
++          policy_year,under_policy,period,n_packages,has_package)
+mutate: changed 1,890 values (17%) of 'Journal' (0 new NAs)
+        new variable 'Journal.published' (character) with 9 unique values and 0% NA
+        new variable 'policy_year' (integer) with 3 unique values and 0% NA
+        new variable 'under_policy' (logical) with 2 unique values and 0% NA
+        new variable 'has_package' (logical) with 2 unique values and 0% NA
+        new variable 'period' (factor) with 4 unique values and 0% NA
+select: dropped 2 variables (published.print, container.title)
+> 
+> article.db %>% count(Journal,under_policy,has_package) %>% print(n=Inf)
+count: now 26 rows and 4 columns, ungrouped
+# A tibble: 26 × 4
+   Journal               under_policy has_package     n
+   <chr>                 <lgl>        <lgl>       <int>
+ 1 AEA P&P               FALSE        FALSE        1590
+ 2 AEA P&P               FALSE        TRUE          412
+ 3 AEA P&P               TRUE         FALSE         297
+ 4 AEA P&P               TRUE         TRUE          639
+ 5 AEJ:Applied Economics TRUE         FALSE          30
+ 6 AEJ:Applied Economics TRUE         TRUE          751
+ 7 AEJ:Economic Policy   TRUE         FALSE          52
+ 8 AEJ:Economic Policy   TRUE         TRUE          790
+ 9 AEJ:Macro             TRUE         FALSE          78
+10 AEJ:Macro             TRUE         TRUE          608
+11 AEJ:Micro             TRUE         FALSE         486
+12 AEJ:Micro             TRUE         TRUE          300
+13 AER                   FALSE        FALSE         553
+14 AER                   FALSE        TRUE           21
+15 AER                   TRUE         FALSE         691
+16 AER                   TRUE         TRUE         1865
+17 AER:Insights          TRUE         FALSE          60
+18 AER:Insights          TRUE         TRUE          184
+19 JEL                   FALSE        FALSE         445
+20 JEL                   FALSE        TRUE            8
+21 JEL                   TRUE         FALSE         151
+22 JEL                   TRUE         TRUE           63
+23 JEP                   FALSE        FALSE         825
+24 JEP                   FALSE        TRUE          111
+25 JEP                   TRUE         FALSE         173
+26 JEP                   TRUE         TRUE          151
+> 
+> saveRDS(article.db,file=article.db.Rds)
+> write_csv(article.db,file=article.db.csv)
+> 
+> # Share of articles with a package, by policy period (complete years only)
+> article.db %>% filter(year <= lastyear) %>%
++   { bind_rows(mutate(.,group="All AEA journals"),
++               filter(.,Journal=="AER") %>% mutate(group="AER (excluding P&P)"),
++               filter(.,str_starts(Journal,"AEJ:")) %>% mutate(group="AEJs"),
++               filter(.,Journal %in% c("AER:Insights","JEL","JEP")) %>% mutate(group="AER:Insights, JEL, JEP"),
++               filter(.,Journal=="AEA P&P") %>% mutate(group="AEA P&P")) } %>%
++   group_by(group,period) %>%
++   summarize(first_year=min(year),last_year=max(year),
++             articles=n(),articles_with_package=sum(has_package),
++             share=articles_with_package/articles,.groups="drop") %>%
++   write_csv(by_period.csv)
+filter: removed 479 rows (4%), 10,855 rows remaining
+mutate: new variable 'group' (character) with one unique value and 0% NA
+filter: removed 7,828 rows (72%), 3,027 rows remaining
+mutate: new variable 'group' (character) with one unique value and 0% NA
+filter: removed 7,939 rows (73%), 2,916 rows remaining
+mutate: new variable 'group' (character) with one unique value and 0% NA
+filter: removed 8,761 rows (81%), 2,094 rows remaining
+mutate: new variable 'group' (character) with one unique value and 0% NA
+filter: removed 8,037 rows (74%), 2,818 rows remaining
+mutate: new variable 'group' (character) with one unique value and 0% NA
+group_by: 2 grouping variables (group, period)
+summarize: now 18 rows and 7 columns, ungrouped
 > 
 > proc.time()
    user  system elapsed 
-  3.751   0.922   3.588 
+  4.446   0.991   4.392 
