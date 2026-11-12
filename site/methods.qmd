@@ -17,6 +17,17 @@ period %>%
   kable()
 ```
 
+## Articles with a package, by year
+
+All AEA journals. Years are years of print publication; the current, incomplete year is not shown.
+
+```{r}
+read_csv("data/share_by_journal_year.csv", show_col_types=FALSE) %>%
+  filter(Journal=="All journals") %>%
+  transmute(Year=as.character(year), Articles=articles, `With a package`=with_package, Share=pct(share)) %>%
+  kable(align="lrrr")
+```
+
 ## Methods in brief
 
 - **Articles:** research articles come from Crossref. Front matter, book reviews, and editorial and administrative items are dropped. Before 2018, the Papers and Proceedings (P&P) appeared as the May issue of the AER; here they are counted as AEA P&P.

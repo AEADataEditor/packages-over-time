@@ -58,15 +58,6 @@ Plot.plot({
 })
 ```
 
-## Data
-
-```{ojs}
-//| echo: false
-Inputs.table(sel.map(d => ({Year: d.year, Articles: d.articles, "With a package": d.with_package,
-                            Share: (100 * d.share).toFixed(1) + "%"})),
-             {format: {Year: d => String(d)}, rows: 30})
-```
-
 Notes:
 
 - Years are years of print publication. The current year is incomplete and is not shown.
