@@ -33,7 +33,7 @@ Plot.plot({
   y: {label: "Share of articles (%)", grid: true, percent: true},
   color: {legend: true, domain: gdata.map(g => `${g.name} (n = ${g.rows.length})`), range: gdata.map(g => g.color)},
   marks: [
-    ...gdata.map(g => Plot.lineY(g.rows, Plot.binX({y: "proportion"},
+    ...gdata.map(g => Plot.lineY(g.rows, Plot.binX({y: "proportion", filter: null},
         {x: "delay_months", thresholds, stroke: () => `${g.name} (n = ${g.rows.length})`, curve: "step", strokeWidth: 1.8}))),
     ...gdata.map(g => Plot.ruleX([d3.median(g.rows, d => d.delay_months)], {stroke: g.color, strokeDasharray: "5,3"})),
     Plot.ruleY([0])
@@ -41,7 +41,7 @@ Plot.plot({
 })
 ```
 
-Dashed vertical lines show the medians. For the AEJs, delays fall on a 3-month grid (quarterly issues).
+Dashed vertical lines show the medians. For the AEJs, delays fall on a 3-month grid (quarterly issues). In the table, the mean difference is after minus before, or with minus without a package, in months. p is from the Wilcoxon rank-sum test, Holm-adjusted across journals.
 
 ```{ojs}
 //| echo: false
@@ -49,16 +49,16 @@ fmt = (x, d = 1) => (x === null || x === undefined || Number.isNaN(x)) ? "–" :
 pfmt = p => (p === null || p === undefined || Number.isNaN(p)) ? "–" : (p < 0.001 ? "< 0.001" : p.toFixed(3))
 split.startsWith("Before")
   ? Inputs.table(tests.filter(d => d.Journal === dj).map(d => ({
-      "Cutoff year": String(d.cutoff), "n before": d.n_pre, "n after": d.n_post,
+      Cutoff: String(d.cutoff), "n before": d.n_pre, "n after": d.n_post,
       "Median before": d.median_pre?.toFixed(0), "Median after": d.median_post?.toFixed(0),
-      "Mean difference (months)": fmt(d.mean_diff), "95% CI": d.mean_diff_lo == null ? "–" : `[${d.mean_diff_lo.toFixed(1)}, ${d.mean_diff_hi.toFixed(1)}]`,
-      "Wilcoxon p (Holm)": pfmt(d.p_wilcox_holm)})))
+      "Mean diff.": fmt(d.mean_diff), "95% CI": d.mean_diff_lo == null ? "–" : `[${d.mean_diff_lo.toFixed(1)}, ${d.mean_diff_hi.toFixed(1)}]`,
+      "p (Holm)": pfmt(d.p_wilcox_holm)})), {layout: "auto"})
   : Inputs.table(byPkg.filter(d => d.Journal === dj).map(d => ({
       Period: d.period, "n with": d.n_package, "n without": d.n_no_package,
       "Median with": d.median_package?.toFixed(0), "Median without": d.median_no_package?.toFixed(0),
-      "Mean difference (with − without)": fmt(d.mean_diff),
+      "Mean diff.": fmt(d.mean_diff),
       "95% CI": d.mean_diff_lo == null ? "–" : `[${d.mean_diff_lo.toFixed(1)}, ${d.mean_diff_hi.toFixed(1)}]`,
-      "Wilcoxon p (Holm)": pfmt(d.p_wilcox_holm)})))
+      "p (Holm)": pfmt(d.p_wilcox_holm)})), {layout: "auto"})
 ```
 
 ## Mean delay by year
@@ -74,7 +74,7 @@ viewof view = Inputs.radio(["publication year", "submission year"], {label: "By"
 //| echo: false
 yv = byYear.filter(d => d.view === view)
 Plot.plot({
-  width, height: 340, marginLeft: 50,
+  width, height: 340, marginLeft: 50, marginBottom: 45,
   x: {label: `Year of ${view.split(" ")[0]}`, tickFormat: "d"},
   y: {label: "Mean delay (months)", grid: true, domain: [0, d3.max(yv, d => d.hi) * 1.05]},
   marks: [

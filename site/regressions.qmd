@@ -69,8 +69,8 @@ rsel = regs.filter(d => d.Journal === rj).map(d => ({...d, Spec: specLabels[d.sp
 specs = Object.values(specLabels).filter(s => rsel.some(d => d.Spec === s))
 Plot.plot({
   title: `${rj}: estimated change at the actual and placebo implementation years`,
-  width, height: 260 * Math.ceil(specs.length / 2), marginLeft: 50,
-  fx: {axis: null}, fy: {axis: null},
+  width, height: 280 * Math.ceil(specs.length / 2), marginLeft: 50, marginTop: 30, marginBottom: 45,
+  fx: {axis: null}, fy: {axis: null, padding: 0.2},
   x: {type: "point", label: "Implementation year (actual or placebo)", tickFormat: "d", domain: [2017, 2018, 2019, 2020, 2021]},
   y: {label: outcome, grid: true},
   color: {legend: true, domain: ["Actual (2019)", "Placebo"], range: ["#C2611F", "#2F6DB5"]},
@@ -78,7 +78,7 @@ Plot.plot({
     Plot.ruleY([0], {stroke: "#888"}),
     Plot.text(rsel.filter((d, i, a) => a.findIndex(e => e.Spec === d.Spec) === i),
               {fx: d => specs.indexOf(d.Spec) % 2, fy: d => Math.floor(specs.indexOf(d.Spec) / 2),
-               text: "Spec", frameAnchor: "top-left", fontWeight: "bold", dy: 4, dx: 4}),
+               text: "Spec", frameAnchor: "top", fontWeight: "bold", fontSize: 12, dy: -14}),
     Plot.ruleX(rsel, {x: "cutoff", y1: "lo95", y2: "hi95", stroke: "kind", strokeWidth: 2.5,
                fx: d => specs.indexOf(d.Spec) % 2, fy: d => Math.floor(specs.indexOf(d.Spec) / 2)}),
     Plot.dot(rsel, {x: "cutoff", y: "est", fill: "kind", r: 4,
@@ -92,11 +92,11 @@ Plot.plot({
 
 ```{ojs}
 //| echo: false
-Inputs.table(rsel.map(d => ({Specification: d.Spec, Type: d.type, "Year": String(d.cutoff),
-  Sample: `${d.first_year}–${d.last_year}`, n: d.n, Clusters: d.n_clusters,
-  "Mean before": (scale * d.mean_pre).toFixed(1), Estimate: d.est.toFixed(2),
-  "95% CI": `[${d.lo95.toFixed(2)}, ${d.hi95.toFixed(2)}]`, p: d.p < 0.001 ? "< 0.001" : d.p.toFixed(3)})),
-  {rows: 25})
+Inputs.table(rsel.map(d => ({Specification: d.Spec, Year: `${d.cutoff}${d.type === "actual" ? "" : " (placebo)"}`,
+  Sample: `${d.first_year}–${d.last_year}`, n: d.n,
+  "Mean before": (scale * d.mean_pre).toFixed(1), Estimate: d.est.toFixed(1),
+  "95% CI": `[${d.lo95.toFixed(1)}, ${d.hi95.toFixed(1)}]`, p: d.p < 0.001 ? "< 0.001" : d.p.toFixed(3)})),
+  {rows: 25, layout: "auto"})
 ```
 
 ## Pooled results

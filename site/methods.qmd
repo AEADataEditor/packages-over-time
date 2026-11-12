@@ -1,0 +1,24 @@
+---
+title: "Data and methods"
+---
+
+```{r}
+suppressMessages({library(readr); library(dplyr); library(knitr)})
+period <- read_csv("data/packages_by_period.csv", show_col_types=FALSE)
+pct <- function(x) paste0(round(100*x), "%")
+```
+
+## Share with a package, by policy period
+
+```{r}
+period %>%
+  transmute(Group=group, Period=period, Years=paste0(first_year,"-",last_year),
+            Articles=articles, `With a package`=articles_with_package, Share=pct(share)) %>%
+  kable()
+```
+
+## Methods in brief
+
+- **Articles:** research articles come from Crossref. Front matter, book reviews, and editorial and administrative items are dropped. Before 2018, the Papers and Proceedings (P&P) appeared as the May issue of the AER; here they are counted as AEA P&P.
+- **Packages:** a package is an openICPSR project. It is matched to an article through the migration of historical supplements, a DataCite link, a citation in the article's reference list, or a deposit titled "Data and Code for: *article title*".
+- **Delay:** submission dates come from manuscript-number DOIs (since 2015).

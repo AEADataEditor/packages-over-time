@@ -18,6 +18,8 @@ website:
         text: Delay
       - href: regressions.qmd
         text: Policy regressions
+      - href: methods.qmd
+        text: Data and methods
   page-footer:
     center: "Data: Crossref, DataCite, openICPSR. Code: [AEADataEditor/packages-over-time](https://github.com/AEADataEditor/packages-over-time)."
 
