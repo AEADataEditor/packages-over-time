@@ -1,5 +1,6 @@
 ---
 title: "Data"
+page-layout: full
 resources:
   - data/articles.csv
 ---
@@ -55,7 +56,7 @@ Inputs.table(dSearch, {
   format: {doi: doiLink(), package_dois: doiLink(), year: d => d, policy_year: d => d, sub_year: d => d ?? "",
            has_package: yn, under_policy: yn, in_pkg_regressions: yn, in_ttp_sample: yn,
            pp_in_aer: yn, complete_year: yn},
-  width: {title: 320, doi: 190, package_dois: 150},
+  width: {title: 280, doi: 190, package_dois: 150},
   layout: "auto", rows: 25
 })
 ```

@@ -74,13 +74,19 @@ ${ksRows.map(d => (d.D === null || d.D === undefined)
 All test statistics are in Tables 3–5 on [Methods](methods.qmd).`
 ```
 
-Dashed vertical lines show the medians. For the AEJs, times fall on a 3-month grid (quarterly issues).
+```{ojs}
+//| echo: false
+html`<div class="fig-notes">
+<p>Hatched bars: share of the articles in each group whose time from submission to publication falls in each 3-month bin; the two groups are hatched in opposite directions and crosshatched where they overlap. Dashed vertical lines: medians.</p>
+<p>${split.startsWith("Published") ? "Groups by year of print publication: before 2019, and 2019 and later." : "Groups: articles with at least one replication package in the AEA Data and Code Repository, and articles without one."}</p>
+<p>Time from submission to publication: months from the middle of the submission quarter to the month of the print issue. The submission year comes from the manuscript-number DOI and the quarter from the manuscript number. For the AEJs, times fall on a 3-month grid (quarterly issues).</p>
+<p>Sample: ${dj} articles with manuscript-number DOIs, published ${d3.min(dsel, d => d.year)}–${d3.max(dsel, d => d.year)}, in years in which the submission dates can be assigned.</p>
+</div>`
+```
 
 The K-S statistic *D* is the largest gap between the two cumulative distributions. These are shares of articles, so groups of different sizes can be compared directly. The sizes enter through the critical value, which shrinks with the effective sample size *n*₁*n*₂/(*n*₁+*n*₂): with a small group, only a large gap is significant. Times fall on a grid and have many ties, so the p-value comes from 10,000 permutations of the group labels, keeping the two group sizes, rather than from the asymptotic formula.
 
 ## Mean time by year
-
-The selected journal is in color and the other journals are in grey. Bars show 95% confidence intervals. By submission year, hollow points mark years still being published: they miss their slowest papers, so their means are too low.
 
 ```{ojs}
 //| echo: false
@@ -104,6 +110,15 @@ Plot.plot({
              channels: {n: "n", median: "median"}, tip: {format: {x: "d"}}})
   ]
 })
+```
+
+```{ojs}
+//| echo: false
+html`<div class="fig-notes">
+<p>Dark line and points: mean months from submission to print publication for ${dj}, by year of ${view.split(" ")[0]}. Vertical bars: 95% confidence intervals. Grey lines: the other journals.</p>
+<p>${view === "publication year" ? "Dashed vertical line: the 2019 AEA-wide policy (between 2018 and 2019)." : "Hollow points: submission years whose articles are still being published. They miss their slowest papers, so their means are too low."}</p>
+<p>Sample: articles with manuscript-number DOIs (AER, AER:Insights, AEJs), in years in which the submission dates can be assigned.</p>
+</div>`
 ```
 
 ## How to read this

@@ -46,3 +46,6 @@ read_csv(file.path(outputs,"articles_policy.csv"), show_col_types=FALSE) %>%
          complete_year, in_pkg_regressions, in_ttp_sample, pub_month, sub_year, sub_quarter, months_to_pub) %>%
   arrange(Journal, year, doi) %>%
   write_site("articles.csv")
+
+# Static figures from the pipeline shown on the pages
+file.copy(file.path(outputs,"figures","figure_share_aer.png"), "data", overwrite=TRUE)

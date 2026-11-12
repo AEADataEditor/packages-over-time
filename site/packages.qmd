@@ -41,6 +41,18 @@ Plot.plot({
 
 ```{ojs}
 //| echo: false
+html`<div class="fig-notes">
+<p>Blue line: share of research articles with at least one replication package.</p>
+<p>${journal === "All journals" ? "No green background for all journals, because journals came under a data policy in different years." : `Green background: years in which ${journal} was covered by a data and code availability policy (from ${policyYear}).`}</p>
+<p>Dashed vertical lines: 2005 (AER data policy), 2009 (AEJs launched), 2019 (AEA-wide policy).</p>
+<p>Research articles: Crossref, excluding front matter, book reviews, and editorial/administrative notes. P&P articles printed in the May AER through 2017 are counted as AEA P&P.</p>
+<p>Replication packages: AEA Data and Code Repository at openICPSR (DataCite links and titles, article references, migrated supplements).</p>
+<p>By year of print publication, ${d3.min(sel, d => d.year)}–${lastYear}. The current year is incomplete and is not shown.</p>
+</div>`
+```
+
+```{ojs}
+//| echo: false
 Plot.plot({
   title: `${journal}: research articles, and articles with a replication package`,
   width, height: 320, marginLeft: 50,
@@ -58,8 +70,12 @@ Plot.plot({
 })
 ```
 
-Notes:
-
-- Years are years of print publication. The current year is incomplete and is not shown.
-- AEA P&P includes the P&P articles printed as the May issue of the AER through 2017.
-- "All journals" has no green background, because journals came under a data policy in different years.
+```{ojs}
+//| echo: false
+html`<div class="fig-notes">
+<p>Grey bars: all research articles in ${journal}. Blue bars: articles with at least one replication package.</p>
+<p>Research articles: Crossref, excluding front matter, book reviews, and editorial/administrative notes. P&P articles printed in the May AER through 2017 are counted as AEA P&P.</p>
+<p>Replication packages: AEA Data and Code Repository at openICPSR (DataCite links and titles, article references, migrated supplements).</p>
+<p>By year of print publication, ${d3.min(sel, d => d.year)}–${lastYear}.</p>
+</div>`
+```

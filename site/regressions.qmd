@@ -81,6 +81,16 @@ estimatePlot(regPkg.filter(d => d.method === (pkgMethod.startsWith("Probit") ? "
   title: `Estimated change in articles with replication packages: ${pkgJournal}, ${pkgMethod.startsWith("Probit") ? "probit (average effect on articles with post = 1)" : "linear probability model"}`})
 ```
 
+```{ojs}
+//| echo: false
+html`<div class="fig-notes">
+<p>Points: ${pkgMethod.startsWith("Probit") ? "probit average effect of the policy term on the probability that an article has a replication package, over the articles with the term = 1" : "linear probability model coefficient on the policy term"}, in percentage points. Vertical bars: 95% confidence intervals, with standard errors clustered by journal × year of publication.</p>
+<p>Orange: actual cutoff, 2019 (all years). Blue: placebo cutoffs, 2017 and 2018 (articles published before 2019 only) and 2020 and 2021 (articles published 2019 and later only). Post = 1 for articles published in the cutoff year or later.</p>
+<p>Panels: specifications, numbered as in Table 6 on <a href="methods.html#regression-equations">Methods</a>. Trends are linear in publication quarter. ${pkgMethod.startsWith("Probit") ? "Missing points: probit not estimable, because the outcome does not vary before or after the cutoff." : ""}</p>
+<p>Sample: ${pkgJournal === "All journals" ? "research articles in all AEA journals" : pkgJournal + " research articles"}, published 2010 to the latest complete year. Packages: AEA Data and Code Repository at openICPSR.</p>
+</div>`
+```
+
 Estimates, confidence intervals and sample sizes for every journal and both methods are in Tables 7 and 9 on [Methods](methods.qmd).
 
 ### Reading the results
@@ -104,6 +114,16 @@ viewof ttpJournal = Inputs.select(journalsIn(regTtp), {label: "Journal", value: 
 estimatePlot(regTtp, ttpJournal, {scale: 1,
   ylabel: "Change in months from submission to publication",
   title: `Estimated change in the time from submission to publication (months): ${ttpJournal}`})
+```
+
+```{ojs}
+//| echo: false
+html`<div class="fig-notes">
+<p>Points: OLS coefficient on the policy term, in months from submission to print publication (for (5), the difference in the change for articles with a replication package). Vertical bars: 95% confidence intervals, with standard errors clustered by journal × year of publication.</p>
+<p>Orange: actual cutoff, 2019 (all years). Blue: placebo cutoffs, 2017 and 2018 (articles published before 2019 only) and 2020 and 2021 (articles published 2019 and later only). Post = 1 for articles published in the cutoff year or later.</p>
+<p>Panels: specifications, numbered as in Table 6 on <a href="methods.html#regression-equations">Methods</a>. Trends are linear in publication quarter.</p>
+<p>Sample: ${ttpJournal === "All journals" ? "AER, AER:Insights and AEJ" : ttpJournal} articles with manuscript-number DOIs, in years in which the submission dates can be assigned.</p>
+</div>`
 ```
 
 Estimates, confidence intervals and sample sizes for every journal are in Tables 8 and 10 on [Methods](methods.qmd).

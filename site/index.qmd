@@ -31,6 +31,23 @@ Plot.plot({
 })
 ```
 
+```{ojs}
+//| echo: false
+html`<div class="fig-notes">
+<p>Grey bars: all research articles. Blue bars: articles with at least one replication package.</p>
+<p>Dashed vertical lines: 2005 (AER data policy), 2009 (AEJs launched), 2019 (AEA-wide policy).</p>
+<p>Research articles: Crossref, excluding front matter, book reviews, and editorial/administrative notes. P&P articles printed in the May AER through 2017 are counted as AEA P&P.</p>
+<p>Replication packages: AEA Data and Code Repository at openICPSR (DataCite links and titles, article references, migrated supplements).</p>
+<p>All AEA journals. By year of print publication, ${d3.min(shareAll, d => d.year)}–${d3.max(shareAll, d => d.year)}.</p>
+</div>`
+```
+
+![](data/figure_share_aer.png){fig-alt="Share of AER articles with a replication package, 1999 to the latest complete year, with the averages by policy period"}
+
+::: {.fig-notes}
+The AER, excluding the P&P printed in the May issue through 2017. The notes are in the figure. Figures for the other journals are on [Packages](packages.qmd).
+:::
+
 ```{r}
 suppressMessages({library(readr); library(dplyr)})
 all  <- read_csv("data/share_by_journal_year.csv", show_col_types=FALSE) %>% filter(Journal=="All journals")
