@@ -107,3 +107,56 @@ The by-year diagnostic changes how the before/after comparison should be read.
 - **Stricter coverage threshold.** Rerun with a stricter publication-year threshold (see caveats).
 - **Delay by package.** Split the delay by whether the paper has a replication package (`has_package` is in `delay_articles.csv`).
 - **Online and acceptance dates.** Download online or acceptance dates from Crossref, if available, to separate review time from production time.
+
+# AI notes: delay by package, policy regressions, website (November 2026)
+
+These notes come from a second Claude Code session, which added the package split to `06_delay.R`, wrote `programs/07_regressions.R`, and built the Quarto site in `site/`.
+
+## Design decisions (confirmed with the user)
+
+- **Package presence, (a):** two designs.
+  - **Interrupted time series:** journal FE, with and without journal-specific trends.
+  - **Difference in differences:** journals newly covered in 2019 (P&P, JEL, JEP) against those already under a policy (AER, AEJs), with year FE, with and without group trends.
+  - **Sample:** 2010 on, so the 2005 and 2009 changes fall outside it.
+- **Delay, (b):** interrupted time series only, because every journal with measurable delays already had a policy. Added *post* × *has package*.
+- **Placebos:** 2017 and 2018, estimated on years before 2019 only; 2020 and 2021, estimated on years from 2019 on only (split samples).
+- **Inference:** clusters are journal × year (CR1, written in base R, so the container needs no new packages). With few years, inference is approximate, especially for single journals.
+- **Website:** Quarto, with Observable JS for the journal selector and R for the tables. It is built only on GitHub Actions, in the project image (the user's rule: no local builds).
+
+## Findings
+
+### Delay by package (`delay_by_package.csv`)
+
+- **AER:** articles with a package take 6–8 months longer, both before and after 2019, so the gap is not policy-specific.
+- **AER:Insights:** +2 months.
+- **AEJs:** no significant difference, except AEJ:Micro after 2019 (+3 months).
+- **Pooled post × package interaction:** +0.5 months, not significant. The policy-period change in delay does not differ by package.
+
+### Packages (`regressions_packages.csv`, pooled; percentage points)
+
+| Specification | 2017 | 2018 | **2019** | 2020 | 2021 |
+|---|---|---|---|---|---|
+| Journal FE | +10* | +13* | **+13*** | −1 | +3 |
+| Journal FE + trends | −10* | −1 | **−6** | −5* | +1 |
+| DiD | +22* | +24* | **+25*** | +5 | −1 |
+| DiD + group trends | −20* | −11 | **−11** | +13 | +7 |
+
+- **Reading:** the level-shift estimates at 2019 are matched by equally large placebos before 2019. The P&P (2013–14) and JEP (2014) shares jumped well before the policy. With trends, nothing is left at 2019.
+- **JEL is the clear exception:** its share went from under 10% to 20–38% from 2020 on (its_fe +24* at 2019, +32* at the 2020 placebo).
+
+### Delay (`regressions_delay.csv`, pooled; months)
+
+| Specification | 2017 | 2018 | **2019** | 2020 | 2021 |
+|---|---|---|---|---|---|
+| Journal FE | +2.1 | +4.4* | **+4.2*** | +3.0* | +2.4* |
+| Journal FE + trends | −4.1* | +4.1* | **+0.7** | +2.3* | +2.4* |
+| Post × package | +0.1 | +0.7 | **+0.5** | +1.2 | +1.2 |
+
+- **Placebos:** they are significant on both sides, which points to a gradual rise over 2017–2022, not a 2019 break. This is consistent with the by-year diagnostics above.
+- **Trend models before 2019:** with only 2016–18, they are just-identified, so the 2017 and 2018 placebos are mirror images. They carry no information.
+
+## Open items
+
+- **First site build:** not yet run. Pages must be set to "GitHub Actions" in the repository settings. The pages were not rendered locally, so check the first Actions run (OJS syntax, Plot facets).
+- **Wild cluster bootstrap:** would give better few-cluster inference, especially for single-journal estimates.
+- **Event-study plot by year:** would show the timing directly, beyond single placebo cutoffs.

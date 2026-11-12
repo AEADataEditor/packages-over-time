@@ -11,7 +11,8 @@ Counts, by year of print publication, the research articles in AEA journals and 
 3. `03_get_datacite.R`: openICPSR deposits in DataCite that link to AEA articles or follow the AEA title template.
 4. `04_combine.R`: restricts Crossref to research articles (dropping front matter, book reviews, and editorial/administrative items), matches packages to articles by migration mapping, DataCite link, reference list, or title, and tabulates by year and journal.
 5. `05_figures.R`: the figures.
-6. `06_delay.R`: the delay between submission and publication, from manuscript-number DOIs (see below).
+6. `06_delay.R`: the delay between submission and publication, from manuscript-number DOIs (see below), also split by whether the article has a replication package.
+7. `07_regressions.R`: regressions of package presence and of delay on the 2019 policy, with placebo implementation years (see below).
 
 Settings (first and last year, whether to re-download) are in `programs/config.R`.
 
@@ -62,6 +63,30 @@ Before and after the 2019 AEA-wide policy is defined by year of publication. `ou
 - `outputs/figures/figure_delay_policy.*`: before and after 2019, by journal. Blue: before; orange: after. Journals with no significant shift (Holm-adjusted Wilcoxon, 5%) are drawn in muted tints.
 - `outputs/figures/figure_delay_by_pubyear.*`, `figure_delay_by_subyear.*`: diagnostic, mean delay (95% CI) by year of publication and by year of submission, each journal against the others in grey (`outputs/delay_by_year.csv`). Recent submission years miss their slowest papers (hollow points).
 - `outputs/figures/figure_delay_{aer,aer_insights,aej_*}.*`: one figure per journal, the journal in color against all other journals in grey, before (top) and after (bottom) the policy.
+
+### Delay by replication package
+
+`outputs/delay_by_package.csv` compares articles with and without a replication package, by journal (and all journals pooled), over all years and before and after 2019. It uses the same statistics as above (with minus without). `outputs/figures/figure_delay_by_package.*` shows the distributions: journals in rows, before and after the policy in columns. Articles without a package after 2019 are mostly exempt (no data or code) or not matched.
+
+## Regressions: did the 2019 policy change packages or delays?
+
+`07_regressions.R` estimates OLS models with standard errors clustered by journal × year (CR1, t with G−1 df). It covers (a) whether a research article has a package (linear probability model, 2010 on, all journals) and (b) the delay in months (articles in `delay_articles.csv`). *post* is 1 from the implementation year on.
+
+- `its_fe`: *post* + journal fixed effects.
+- `its_trend`: adds a linear trend for each journal, centered on the cutoff.
+- `did`, (a) only: *post* × *newly covered* + journal and year fixed effects. Newly covered: P&P, JEL, JEP, which had no policy before 2019. Comparison: AER and AEJs. AER:Insights is excluded.
+- `did_trend`, (a) only: adds a separate trend for each group.
+- `pkg`, (b) only: *post* × *has package* + journal fixed effects.
+
+Pooled models are estimated for all journals together. `its_fe` and `its_trend` are also estimated for each journal on its own.
+
+**Placebos.** The models are re-estimated with fake implementation years. Placebos at 2017 and 2018 use only years before 2019; placebos at 2020 and 2021 use only years from 2019 on. Settings are in `programs/config.R` (`reg.*`).
+
+Outputs: `outputs/regressions_packages.csv` and `outputs/regressions_delay.csv` (one row per outcome, journal, specification, and cutoff), and `outputs/figures/figure_regressions_{packages,delay}.*` (pooled estimates at the actual and placebo years).
+
+## Website
+
+`site/` is a Quarto website with a journal selector, covering packages over time, delay, and the regressions. It reads the CSV files in `outputs/`; its pre-render step `site/_prepare.R` copies and aggregates them. The site is built and published by GitHub Actions (`.github/workflows/site.yml`) in the project's container image, on every push to `main` that changes `site/` or `outputs/`. It is not built locally. Before the first build, set Settings → Pages → Source to "GitHub Actions". The analysis is not re-run on GitHub, so run the pipeline and commit `outputs/` first.
 
 ## Running
 

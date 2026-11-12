@@ -1,0 +1,36 @@
+project:
+  type: website
+  output-dir: _site
+  # copies and aggregates ../outputs into data/ (the analysis itself is in ../programs)
+  pre-render: _prepare.R
+
+website:
+  title: "Replication packages in AEA journals"
+  repo-url: https://github.com/AEADataEditor/packages-over-time
+  repo-actions: [source, issue]
+  navbar:
+    left:
+      - href: index.qmd
+        text: Overview
+      - href: packages.qmd
+        text: Packages
+      - href: delay.qmd
+        text: Delay
+      - href: regressions.qmd
+        text: Policy regressions
+  page-footer:
+    center: "Data: Crossref, DataCite, openICPSR. Code: [AEADataEditor/packages-over-time](https://github.com/AEADataEditor/packages-over-time)."
+
+format:
+  html:
+    theme:
+      light: cosmo
+      dark: darkly
+    toc: true
+    code-fold: true
+    code-tools: false
+
+execute:
+  echo: false
+  warning: false
+  message: false

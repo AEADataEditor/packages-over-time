@@ -102,3 +102,25 @@ delay.cohorts.csv  <- file.path(Outputs,"delay_cohorts.csv")
 delay.pubyears.csv <- file.path(Outputs,"delay_pubyears.csv")
 delay.tests.csv    <- file.path(Outputs,"delay_tests.csv")
 delay.by.year.csv  <- file.path(Outputs,"delay_by_year.csv")
+# delay by whether the article has a replication package
+delay.package.csv  <- file.path(Outputs,"delay_by_package.csv")
+
+# Regressions (07_regressions.R): did the 2019 AEA-wide policy change (a) the presence of replication
+# packages, (b) the delay from submission to publication?
+# Actual implementation year, and placebo implementation years: placebos before the policy are estimated
+# on years before reg.policy.year only, placebos after it on years from reg.policy.year on only, so that
+# the actual break is never in a placebo sample.
+reg.policy.year   <- 2019L
+reg.placebo.pre   <- c(2017L,2018L)
+reg.placebo.post  <- c(2020L,2021L)
+# (a) packages: years (from the AEJ launch on, so that the 2005 and 2009 changes are outside the sample)
+reg.pkg.firstyear <- 2010L
+# journals that had no data policy before 2019 (treated in the difference-in-differences);
+# the AER and AEJs, which had one since 2005 and 2009, are the comparison group.
+# AER:Insights (first published 2019) has no years before the policy and is excluded from the
+# difference in differences (in the time-series specifications, its journal fixed effect absorbs it).
+reg.pkg.newly     <- c("AEA P&P","JEL","JEP")
+reg.pkg.excluded  <- c("AER:Insights")
+# Outputs
+reg.packages.csv  <- file.path(Outputs,"regressions_packages.csv")
+reg.delay.csv     <- file.path(Outputs,"regressions_delay.csv")

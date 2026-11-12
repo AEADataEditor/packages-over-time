@@ -1,0 +1,41 @@
+---
+title: "Replication packages in AEA journals"
+subtitle: "Coverage over time, delay to publication, and the 2019 AEA data and code policy"
+---
+
+```{r}
+suppressMessages({library(readr); library(dplyr); library(knitr)})
+share  <- read_csv("data/share_by_journal_year.csv", show_col_types=FALSE)
+period <- read_csv("data/packages_by_period.csv", show_col_types=FALSE)
+all    <- share %>% filter(Journal=="All journals")
+last   <- max(all$year)
+pct <- function(x) paste0(round(100*x), "%")
+```
+
+This site tracks the research articles published in the journals of the American Economic Association (AEA) since 1999. It shows how many have a replication package in the [AEA Data and Code Repository](https://www.openicpsr.org/openicpsr/aea) at openICPSR.
+
+- In `r last`, `r pct(all$share[all$year==last])` of the `r all$articles[all$year==last]` research articles had a replication package. In 1999, `r pct(all$share[all$year==1999])` did.
+- The AER introduced a data policy in 2005. The AEJs had one from their launch in 2009. The AEA-wide policy, with review by the AEA Data Editor, took effect in 2019.
+
+## Pages
+
+- **[Packages](packages.qmd)**: share and number of articles with a replication package, by journal and year.
+- **[Delay](delay.qmd)**: time from submission to print publication, by journal: before and after 2019, and for articles with and without a replication package.
+- **[Policy regressions](regressions.qmd)**: did the 2019 policy change the presence of packages or the delay? The page shows estimates at the actual implementation year and at placebo years.
+
+## Share with a package, by policy period
+
+```{r}
+period %>%
+  transmute(Group=group, Period=period, Years=paste0(first_year,"-",last_year),
+            Articles=articles, `With a package`=articles_with_package, Share=pct(share)) %>%
+  kable()
+```
+
+## Methods in brief
+
+- **Articles:** research articles come from Crossref. Front matter, book reviews, and editorial and administrative items are dropped. Before 2018, the Papers and Proceedings (P&P) appeared as the May issue of the AER; here they are counted as AEA P&P.
+- **Packages:** a package is an openICPSR project. It is matched to an article through the migration of historical supplements, a DataCite link, a citation in the article's reference list, or a deposit titled "Data and Code for: *article title*".
+- **Delay:** submission dates come from manuscript-number DOIs (since 2015).
+
+The full description is in the [README](https://github.com/AEADataEditor/packages-over-time#readme). This site is built by GitHub Actions from the pipeline outputs in `outputs/`.

@@ -3,3 +3,7 @@
 .RData
 .Ruserdata
 interwrk
+site/_site/
+site/.quarto/
+site/data/
+programs/Rplots.pdf

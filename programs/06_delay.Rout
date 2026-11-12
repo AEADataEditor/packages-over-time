@@ -568,6 +568,284 @@ relocate: columns reordered (Journal, cutoff, n_pre, n_post, first_year, …)
 filter: removed 6 rows (50%), 6 rows remaining
 > 
 > # ===========================
+> # Delay by whether the article has a replication package
+> # For each journal (and all journals pooled), articles with a package against articles without, over
+> # all analyzed years and separately before and after the policy. Same statistics as above
+> # (with package minus without). Holm adjustment across journals, within each period.
+> # Articles without a package after 2019 are mostly exempt (no data or code, e.g., theory) or not matched.
+> # ===========================
+> 
+> package_test <- function(df) {
++   with.p <- df$delay_months[df$has_package]
++   no.p   <- df$delay_months[!df$has_package]
++   out <- tibble(n_package=length(with.p),n_no_package=length(no.p),
++                 median_package=if (length(with.p)) median(with.p) else NA_real_,
++                 median_no_package=if (length(no.p)) median(no.p) else NA_real_,
++                 mean_package=if (length(with.p)) mean(with.p) else NA_real_,
++                 mean_no_package=if (length(no.p)) mean(no.p) else NA_real_)
++   if (length(with.p) < 5 || length(no.p) < 5) return(out)
++   w <- suppressWarnings(wilcox.test(with.p,no.p,conf.int=TRUE))
++   t <- t.test(with.p,no.p)
++   out %>% mutate(shift=unname(w$estimate),shift_lo=w$conf.int[1],shift_hi=w$conf.int[2],
++                  mean_diff=mean(with.p)-mean(no.p),mean_diff_lo=t$conf.int[1],mean_diff_hi=t$conf.int[2],
++                  p_wilcox=w$p.value)
++ }
+> 
+> delay.pkg.data <- bind_rows(delay %>% mutate(Journal=as.character(Journal)),
++                             delay %>% mutate(Journal="All journals"))
+mutate: converted 'Journal' from factor to character (0 new NA)
+mutate: converted 'Journal' from factor to character (0 new NA)
+> by.package <- bind_rows(
++   delay.pkg.data %>% mutate(period="All years"),
++   delay.pkg.data %>% mutate(period=as.character(period))) %>%
++   group_by(Journal,period) %>%
++   group_modify(~ package_test(.x)) %>%
++   ungroup() %>%
++   group_by(period,pooled=Journal=="All journals") %>%
++   mutate(p_wilcox_holm=if (first(pooled)) p_wilcox else p.adjust(p_wilcox,method="holm")) %>%
++   ungroup() %>% select(-pooled) %>%
++   mutate(significant=!is.na(p_wilcox_holm) & p_wilcox_holm < delay.alpha,
++          Journal=factor(Journal,levels=c(journal.order,"All journals")),
++          period=factor(period,levels=c("All years",levels(delay$period)))) %>%
++   arrange(Journal,period)
+mutate: converted 'period' from factor to character (0 new NA)
+mutate: converted 'period' from factor to character (0 new NA)
+group_by: 2 grouping variables (Journal, period)
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+mutate: new variable 'shift' (double) with one unique value and 0% NA
+        new variable 'shift_lo' (double) with one unique value and 0% NA
+        new variable 'shift_hi' (double) with one unique value and 0% NA
+        new variable 'mean_diff' (double) with one unique value and 0% NA
+        new variable 'mean_diff_lo' (double) with one unique value and 0% NA
+        new variable 'mean_diff_hi' (double) with one unique value and 0% NA
+        new variable 'p_wilcox' (double) with one unique value and 0% NA
+ungroup: no grouping variables remain
+group_by: 2 grouping variables (period, pooled)
+mutate (grouped): new variable 'p_wilcox_holm' (double) with 17 unique values and 5% NA
+ungroup: no grouping variables remain
+select: dropped one variable (pooled)
+mutate: converted 'Journal' from character to factor (0 new NA)
+        converted 'period' from character to factor (0 new NA)
+        new variable 'significant' (logical) with 2 unique values and 0% NA
+> 
+> by.package %>% print(n=Inf,width=Inf)
+# A tibble: 20 × 17
+   Journal               period         n_package n_no_package median_package
+   <fct>                 <fct>              <int>        <int>          <dbl>
+ 1 AER                   All years            531          127           26.0
+ 2 AER                   Before 2019           88           18           27  
+ 3 AER                   2019 and later       443          109           26.0
+ 4 AER:Insights          All years            141           45           16.0
+ 5 AER:Insights          2019 and later       141           45           16.0
+ 6 AEJ:Applied Economics All years            367           19           26.0
+ 7 AEJ:Applied Economics Before 2019           84            1           21.5
+ 8 AEJ:Applied Economics 2019 and later       283           18           26.0
+ 9 AEJ:Economic Policy   All years            450           34           27  
+10 AEJ:Economic Policy   Before 2019          128            8           24  
+11 AEJ:Economic Policy   2019 and later       322           26           30  
+12 AEJ:Macro             All years            277           44           29.0
+13 AEJ:Macro             Before 2019           82            9           26.0
+14 AEJ:Macro             2019 and later       195           35           32.0
+15 AEJ:Micro             All years            182          265           30  
+16 AEJ:Micro             Before 2019           37           88           24  
+17 AEJ:Micro             2019 and later       145          177           30  
+18 All journals          All years           1948          534           26.0
+19 All journals          Before 2019          419          124           24  
+20 All journals          2019 and later      1529          410           27  
+   median_no_package mean_package mean_no_package       shift    shift_lo
+               <dbl>        <dbl>           <dbl>       <dbl>       <dbl>
+ 1              20.0         28.9            22.5  6.00         4.00     
+ 2              20.5         29.2            21.3  7.00         2.00     
+ 3              20.0         28.8            22.7  6.00         4.00     
+ 4              13.0         16.3            14.4  3.00         0.0000112
+ 5              13.0         16.3            14.4  3.00         0.0000112
+ 6              29.0         26.3            30.9 -3.00        -9.00     
+ 7              11.0         22.1            11.0 NA           NA        
+ 8              29.0         27.5            32.0 -3.00        -6.00     
+ 9              27           29.7            28.6 -0.0000354   -3.00     
+10              28.5         26.8            28.1 -3.00        -9.00     
+11              27           30.8            28.7  0.0000324   -3.00     
+12              29.0         31.9            31.8 -0.00000232  -3.00     
+13              26.0         26.4            31.7 -3.00       -12.0      
+14              29.0         34.2            31.8  3.00        -0.0000399
+15              27           30.9            27.6  3.00         0.0000386
+16              24           24.9            24.3  0.0000224   -3.00     
+17              30           32.4            29.2  3.00         0.0000321
+18              26.0         28.3            25.8  2.00         1.00     
+19              24           26.1            24.6  1.00        -0.0000217
+20              27           28.9            26.2  2.00         1.00     
+     shift_hi mean_diff mean_diff_lo mean_diff_hi p_wilcox p_wilcox_holm
+        <dbl>     <dbl>        <dbl>        <dbl>    <dbl>         <dbl>
+ 1  8.00         6.35          4.04         8.65   7.93e-9  0.0000000476
+ 2 13.0          7.95          2.81        13.1    1.01e-2  0.0404      
+ 3  8.00         6.07          3.50         8.64   2.17e-7  0.00000130  
+ 4  3.00         1.92          1.00         2.83   4.69e-5  0.000234    
+ 5  3.00         1.92          1.00         2.83   4.69e-5  0.000234    
+ 6 -0.0000149   -4.63        -10.1          0.874  2.11e-2  0.0633      
+ 7 NA           NA            NA           NA     NA       NA           
+ 8 -0.0000305   -4.51         -9.81         0.802  2.67e-2  0.0802      
+ 9  3.00         1.10         -1.06         3.26   9.82e-1  1           
+10  3.00        -1.31         -7.37         4.74   4.84e-1  0.969       
+11  3.00         2.10         -0.270        4.47   5.68e-1  0.568       
+12  3.00         0.0638       -3.59         3.72   9.68e-1  1           
+13  0.0000481   -5.26        -13.5          2.95   1.35e-1  0.405       
+14  6.00         2.33         -1.95         6.61   2.57e-1  0.515       
+15  3.00         3.28          1.60         4.95   3.40e-4  0.00136     
+16  3.00         0.551        -2.22         3.32   5.83e-1  0.969       
+17  3.00         3.18          1.29         5.08   1.83e-3  0.00733     
+18  3.00         2.46          1.48         3.44   8.71e-5  0.0000871   
+19  3.00         1.56         -0.191        3.31   2.22e-1  0.222       
+20  3.00         2.67          1.52         3.82   2.75e-4  0.000275    
+   significant
+   <lgl>      
+ 1 TRUE       
+ 2 TRUE       
+ 3 TRUE       
+ 4 TRUE       
+ 5 TRUE       
+ 6 FALSE      
+ 7 FALSE      
+ 8 FALSE      
+ 9 FALSE      
+10 FALSE      
+11 FALSE      
+12 FALSE      
+13 FALSE      
+14 FALSE      
+15 TRUE       
+16 FALSE      
+17 TRUE       
+18 TRUE       
+19 FALSE      
+20 TRUE       
+> write_csv(by.package,delay.package.csv)
+> 
+> # ===========================
 > # Figures
 > # ===========================
 > 
@@ -920,6 +1198,61 @@ rename: renamed one variable (series)
 filter: removed 53 rows (17%), 265 rows remaining
 rename: renamed one variable (Journal)
 > 
+> # ---------------------------
+> # 5. Delay by whether the article has a replication package, by journal and period
+> # Columns: before and after the policy; rows: journals. Blue: with a package; grey: without.
+> # ---------------------------
+> 
+> col.pkg   <- "#1B4F8A"   # with a package (as in 05_figures.R)
+> col.nopkg <- "grey50"    # without a package
+> pkg.levels <- c("With a replication package","Without")
+> 
+> delay.pkg <- delay %>%
++   mutate(pkg=factor(if_else(has_package,pkg.levels[1],pkg.levels[2]),levels=pkg.levels),
++          row=as.integer(pkg))
+mutate: changed 1,653 values (67%) of 'row' (0 new NAs)
+        new variable 'pkg' (factor) with 2 unique values and 0% NA
+> d.pkg <- dens_of(delay.pkg,Journal,period,pkg)
+group_by: 3 grouping variables (Journal, period, pkg)
+ungroup: no grouping variables remain
+> med.pkg <- delay.pkg %>% group_by(Journal,period,pkg) %>%
++   summarize(med=median(delay_months),.groups="drop")
+group_by: 3 grouping variables (Journal, period, pkg)
+summarize: now 22 rows and 4 columns, ungrouped
+> labels.pkg <- by.package %>%
++   filter(Journal %in% journal.order, period!="All years") %>%
++   mutate(Journal=factor(as.character(Journal),levels=journal.order),
++          period=factor(as.character(period),levels=period.levels),
++          label=paste0("n = ",n_package," / ",n_no_package,
++                       if_else(is.na(mean_diff),"",
++                               paste0("\nmean ",sprintf("%+.1f",mean_diff)," [",sprintf("%.1f",mean_diff_lo),", ",
++                                      sprintf("%.1f",mean_diff_hi),"]",
++                                      if_else(significant,"","\nn.s.")))))
+filter: removed 9 rows (45%), 11 rows remaining
+mutate: changed 0 values (0%) of 'Journal' (0 new NAs)
+        changed 0 values (0%) of 'period' (0 new NAs)
+        new variable 'label' (character) with 11 unique values and 0% NA
+> 
+> fig.pkg <- ggplot() +
++   geom_point(data=delay.pkg,aes(delay_months,-(row-1+jit)*band/2,colour=pkg),alpha=0.5,size=0.7,stroke=0) +
++   geom_line(data=d.pkg,aes(x,y,colour=pkg),alpha=0.8,linewidth=0.6) +
++   geom_segment(data=med.pkg,aes(x=med,xend=med,y=0,yend=ymax.dens*0.9,colour=pkg),linewidth=0.5) +
++   geom_text(data=labels.pkg,aes(x=xmax,y=ymax.dens,label=label),hjust=1,vjust=1,size=2.4,colour="grey30",lineheight=0.95) +
++   facet_grid(Journal ~ period) +
++   scale_colour_manual(values=setNames(c(col.pkg,col.nopkg),pkg.levels)) +
++   guides(colour=guide_legend(override.aes=list(alpha=1,size=2.5,linewidth=1))) +
++   x.scale +
++   scale_y_continuous(limits=c(-band,ymax.dens*1.15),expand=expansion(add=0)) +
++   labs(title="Delay from submission to publication, by whether the article has a replication package",
++        subtitle=paste0("Vertical lines: medians. n: articles with / without a package. Mean: difference in means (with minus without), Welch 95% CI;\n",
++                        "n.s.: no significant difference (Wilcoxon rank-sum, Holm-adjusted across journals, ",percent(delay.alpha),
++                        " level). Points: upper row with a package, lower row without."),
++        x="Time from submission to print publication",y=element_blank(),caption=caption.delay) +
++   theme_delay() +
++   theme(strip.text.y=element_text(angle=0,hjust=0))
+> ggsave(file.path(Figures,"figure_delay_by_package.png"),fig.pkg,width=10,height=11,dpi=300)
+> ggsave(file.path(Figures,"figure_delay_by_package.pdf"),fig.pkg,width=10,height=11)
+> 
 > proc.time()
    user  system elapsed 
-  8.612   0.870   8.496 
+ 12.559   2.002  11.906 

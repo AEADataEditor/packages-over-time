@@ -165,6 +165,49 @@ write_csv(tests,delay.tests.csv)
 main.tests <- tests %>% filter(cutoff==delay.policy.year)
 
 # ===========================
+# Delay by whether the article has a replication package
+# For each journal (and all journals pooled), articles with a package against articles without, over
+# all analyzed years and separately before and after the policy. Same statistics as above
+# (with package minus without). Holm adjustment across journals, within each period.
+# Articles without a package after 2019 are mostly exempt (no data or code, e.g., theory) or not matched.
+# ===========================
+
+package_test <- function(df) {
+  with.p <- df$delay_months[df$has_package]
+  no.p   <- df$delay_months[!df$has_package]
+  out <- tibble(n_package=length(with.p),n_no_package=length(no.p),
+                median_package=if (length(with.p)) median(with.p) else NA_real_,
+                median_no_package=if (length(no.p)) median(no.p) else NA_real_,
+                mean_package=if (length(with.p)) mean(with.p) else NA_real_,
+                mean_no_package=if (length(no.p)) mean(no.p) else NA_real_)
+  if (length(with.p) < 5 || length(no.p) < 5) return(out)
+  w <- suppressWarnings(wilcox.test(with.p,no.p,conf.int=TRUE))
+  t <- t.test(with.p,no.p)
+  out %>% mutate(shift=unname(w$estimate),shift_lo=w$conf.int[1],shift_hi=w$conf.int[2],
+                 mean_diff=mean(with.p)-mean(no.p),mean_diff_lo=t$conf.int[1],mean_diff_hi=t$conf.int[2],
+                 p_wilcox=w$p.value)
+}
+
+delay.pkg.data <- bind_rows(delay %>% mutate(Journal=as.character(Journal)),
+                            delay %>% mutate(Journal="All journals"))
+by.package <- bind_rows(
+  delay.pkg.data %>% mutate(period="All years"),
+  delay.pkg.data %>% mutate(period=as.character(period))) %>%
+  group_by(Journal,period) %>%
+  group_modify(~ package_test(.x)) %>%
+  ungroup() %>%
+  group_by(period,pooled=Journal=="All journals") %>%
+  mutate(p_wilcox_holm=if (first(pooled)) p_wilcox else p.adjust(p_wilcox,method="holm")) %>%
+  ungroup() %>% select(-pooled) %>%
+  mutate(significant=!is.na(p_wilcox_holm) & p_wilcox_holm < delay.alpha,
+         Journal=factor(Journal,levels=c(journal.order,"All journals")),
+         period=factor(period,levels=c("All years",levels(delay$period)))) %>%
+  arrange(Journal,period)
+
+by.package %>% print(n=Inf,width=Inf)
+write_csv(by.package,delay.package.csv)
+
+# ===========================
 # Figures
 # ===========================
 
@@ -417,3 +460,48 @@ fig.subyear <- fig_by_year(delay.sub,"Year of submission",
          "published articles observed; recent years miss their slowest papers, so their means are too low."),
   paste0("Papers accepted after mid-2019 were reviewed by the Data Editor; given the delays, that includes many papers submitted from about 2016 on.\n"),
   "figure_delay_by_subyear",policy.line=FALSE)
+
+# ---------------------------
+# 5. Delay by whether the article has a replication package, by journal and period
+# Columns: before and after the policy; rows: journals. Blue: with a package; grey: without.
+# ---------------------------
+
+col.pkg   <- "#1B4F8A"   # with a package (as in 05_figures.R)
+col.nopkg <- "grey50"    # without a package
+pkg.levels <- c("With a replication package","Without")
+
+delay.pkg <- delay %>%
+  mutate(pkg=factor(if_else(has_package,pkg.levels[1],pkg.levels[2]),levels=pkg.levels),
+         row=as.integer(pkg))
+d.pkg <- dens_of(delay.pkg,Journal,period,pkg)
+med.pkg <- delay.pkg %>% group_by(Journal,period,pkg) %>%
+  summarize(med=median(delay_months),.groups="drop")
+labels.pkg <- by.package %>%
+  filter(Journal %in% journal.order, period!="All years") %>%
+  mutate(Journal=factor(as.character(Journal),levels=journal.order),
+         period=factor(as.character(period),levels=period.levels),
+         label=paste0("n = ",n_package," / ",n_no_package,
+                      if_else(is.na(mean_diff),"",
+                              paste0("\nmean ",sprintf("%+.1f",mean_diff)," [",sprintf("%.1f",mean_diff_lo),", ",
+                                     sprintf("%.1f",mean_diff_hi),"]",
+                                     if_else(significant,"","\nn.s.")))))
+
+fig.pkg <- ggplot() +
+  geom_point(data=delay.pkg,aes(delay_months,-(row-1+jit)*band/2,colour=pkg),alpha=0.5,size=0.7,stroke=0) +
+  geom_line(data=d.pkg,aes(x,y,colour=pkg),alpha=0.8,linewidth=0.6) +
+  geom_segment(data=med.pkg,aes(x=med,xend=med,y=0,yend=ymax.dens*0.9,colour=pkg),linewidth=0.5) +
+  geom_text(data=labels.pkg,aes(x=xmax,y=ymax.dens,label=label),hjust=1,vjust=1,size=2.4,colour="grey30",lineheight=0.95) +
+  facet_grid(Journal ~ period) +
+  scale_colour_manual(values=setNames(c(col.pkg,col.nopkg),pkg.levels)) +
+  guides(colour=guide_legend(override.aes=list(alpha=1,size=2.5,linewidth=1))) +
+  x.scale +
+  scale_y_continuous(limits=c(-band,ymax.dens*1.15),expand=expansion(add=0)) +
+  labs(title="Delay from submission to publication, by whether the article has a replication package",
+       subtitle=paste0("Vertical lines: medians. n: articles with / without a package. Mean: difference in means (with minus without), Welch 95% CI;\n",
+                       "n.s.: no significant difference (Wilcoxon rank-sum, Holm-adjusted across journals, ",percent(delay.alpha),
+                       " level). Points: upper row with a package, lower row without."),
+       x="Time from submission to print publication",y=element_blank(),caption=caption.delay) +
+  theme_delay() +
+  theme(strip.text.y=element_text(angle=0,hjust=0))
+ggsave(file.path(Figures,"figure_delay_by_package.png"),fig.pkg,width=10,height=11,dpi=300)
+ggsave(file.path(Figures,"figure_delay_by_package.pdf"),fig.pkg,width=10,height=11)

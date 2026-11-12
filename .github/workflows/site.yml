@@ -1,0 +1,55 @@
+# Build the Quarto site (site/) from the committed pipeline outputs (outputs/) and publish it on
+# GitHub Pages. Runs in the project's container image (tag from .myconfig.sh), which has R and Quarto.
+# The analysis itself (programs/) is not re-run here.
+# Repository settings: Pages > Build and deployment > Source: GitHub Actions.
+name: Site
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", "outputs/**", ".github/workflows/site.yml", ".myconfig.sh"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.tag.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: tag
+        run: |
+          . ./.myconfig.sh
+          echo "image=$dockerrepo:$tag" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: image
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ needs.image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Render
+        run: quarto render site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/_site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

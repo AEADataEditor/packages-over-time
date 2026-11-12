@@ -1,0 +1,96 @@
+---
+title: "Delay from submission to publication"
+---
+
+Since 2015, AER and AEJ DOIs, and AER:Insights DOIs from its start in 2019, are based on the manuscript number. For example, `10.1257/aer.20151234` was submitted in 2015, as manuscript 1234 of that year. Within a submission year, the quartiles of the manuscript numbers give the submission quarter. The delay runs from the middle of that quarter to the month of the print issue, so it is precise to about ±1.5 months. The P&P, JEL, and JEP are excluded, because their DOIs are not numbered by submission. Only publication years in which (nearly) all articles come from fully observed submission years are used. The [README](https://github.com/AEADataEditor/packages-over-time#delay-from-submission-to-publication) has the details.
+
+```{ojs}
+//| echo: false
+delay = FileAttachment("data/delay_articles.csv").csv({typed: true})
+byYear = FileAttachment("data/delay_by_year.csv").csv({typed: true})
+tests = FileAttachment("data/delay_tests.csv").csv({typed: true})
+byPkg = FileAttachment("data/delay_by_package.csv").csv({typed: true})
+djournals = ["AER","AER:Insights","AEJ:Applied Economics","AEJ:Economic Policy","AEJ:Macro","AEJ:Micro"]
+viewof dj = Inputs.select(djournals, {label: "Journal", value: "AER"})
+viewof split = Inputs.radio(["Before / after 2019", "With / without a replication package"],
+                            {label: "Compare", value: "Before / after 2019"})
+```
+
+```{ojs}
+//| echo: false
+dsel = delay.filter(d => d.Journal === dj)
+groups = split.startsWith("Before")
+  ? [{name: "Before 2019", color: "#2F6DB5", f: d => d.year < 2019},
+     {name: "2019 and later", color: "#C2611F", f: d => d.year >= 2019}]
+  : [{name: "With a package", color: "#1B4F8A", f: d => d.has_package},
+     {name: "Without", color: "#8c8c8c", f: d => !d.has_package}]
+gdata = groups.map(g => ({...g, rows: dsel.filter(g.f)})).filter(g => g.rows.length > 0)
+thresholds = d3.range(-6, 102, 3)
+Plot.plot({
+  title: `${dj}: distribution of delays (share of articles in each 3-month bin)`,
+  width, height: 360, marginLeft: 50,
+  x: {label: "Months from submission to print publication", domain: [-6, 96], ticks: d3.range(0, 97, 12)},
+  y: {label: "Share of articles (%)", grid: true, percent: true},
+  color: {legend: true, domain: gdata.map(g => `${g.name} (n = ${g.rows.length})`), range: gdata.map(g => g.color)},
+  marks: [
+    ...gdata.map(g => Plot.lineY(g.rows, Plot.binX({y: "proportion"},
+        {x: "delay_months", thresholds, stroke: () => `${g.name} (n = ${g.rows.length})`, curve: "step", strokeWidth: 1.8}))),
+    ...gdata.map(g => Plot.ruleX([d3.median(g.rows, d => d.delay_months)], {stroke: g.color, strokeDasharray: "5,3"})),
+    Plot.ruleY([0])
+  ]
+})
+```
+
+Dashed vertical lines show the medians. For the AEJs, delays fall on a 3-month grid (quarterly issues).
+
+```{ojs}
+//| echo: false
+fmt = (x, d = 1) => (x === null || x === undefined || Number.isNaN(x)) ? "–" : (x > 0 ? "+" : "") + x.toFixed(d)
+pfmt = p => (p === null || p === undefined || Number.isNaN(p)) ? "–" : (p < 0.001 ? "< 0.001" : p.toFixed(3))
+split.startsWith("Before")
+  ? Inputs.table(tests.filter(d => d.Journal === dj).map(d => ({
+      "Cutoff year": String(d.cutoff), "n before": d.n_pre, "n after": d.n_post,
+      "Median before": d.median_pre?.toFixed(0), "Median after": d.median_post?.toFixed(0),
+      "Mean difference (months)": fmt(d.mean_diff), "95% CI": d.mean_diff_lo == null ? "–" : `[${d.mean_diff_lo.toFixed(1)}, ${d.mean_diff_hi.toFixed(1)}]`,
+      "Wilcoxon p (Holm)": pfmt(d.p_wilcox_holm)})))
+  : Inputs.table(byPkg.filter(d => d.Journal === dj).map(d => ({
+      Period: d.period, "n with": d.n_package, "n without": d.n_no_package,
+      "Median with": d.median_package?.toFixed(0), "Median without": d.median_no_package?.toFixed(0),
+      "Mean difference (with − without)": fmt(d.mean_diff),
+      "95% CI": d.mean_diff_lo == null ? "–" : `[${d.mean_diff_lo.toFixed(1)}, ${d.mean_diff_hi.toFixed(1)}]`,
+      "Wilcoxon p (Holm)": pfmt(d.p_wilcox_holm)})))
+```
+
+## Mean delay by year
+
+The selected journal is in color and the other journals are in grey. Bars show 95% confidence intervals. By submission year, hollow points mark years still being published: they miss their slowest papers, so their means are too low.
+
+```{ojs}
+//| echo: false
+viewof view = Inputs.radio(["publication year", "submission year"], {label: "By", value: "publication year"})
+```
+
+```{ojs}
+//| echo: false
+yv = byYear.filter(d => d.view === view)
+Plot.plot({
+  width, height: 340, marginLeft: 50,
+  x: {label: `Year of ${view.split(" ")[0]}`, tickFormat: "d"},
+  y: {label: "Mean delay (months)", grid: true, domain: [0, d3.max(yv, d => d.hi) * 1.05]},
+  marks: [
+    view === "publication year" ? Plot.ruleX([2018.5], {stroke: "#44546A", strokeDasharray: "4,3"}) : null,
+    Plot.line(yv.filter(d => d.Journal !== dj), {x: "year", y: "mean", z: "Journal", stroke: "#cccccc"}),
+    Plot.ruleX(yv.filter(d => d.Journal === dj), {x: "year", y1: "lo", y2: "hi", stroke: "#44546A", strokeOpacity: 0.6}),
+    Plot.line(yv.filter(d => d.Journal === dj), {x: "year", y: "mean", stroke: "#44546A", strokeWidth: 1.8}),
+    Plot.dot(yv.filter(d => d.Journal === dj), {x: "year", y: "mean", stroke: "#44546A",
+             fill: d => d.complete ? "#44546A" : "white", r: 3.5,
+             channels: {n: "n", median: "median"}, tip: {format: {x: "d"}}})
+  ]
+})
+```
+
+## How to read this
+
+- **AER:** no change in delay after 2019.
+- **AEJs:** delays are 3–7 months longer after 2019 than before. But the increase is gradual, from 2017 to 2022, not a step at 2019. For AEJ:Applied and AEJ:Micro it starts with papers submitted in 2017. A publication backlog in 2021–22 and COVID fall in the same window. The [policy regressions](regressions.qmd) test this with placebo years.
+- **With versus without a package:** AER articles with a package take about 6 months longer, but they did so before 2019 as well. Articles without a package include those exempt from the policy (no data or code) and those whose package was not matched.
