@@ -208,6 +208,57 @@ by.package %>% print(n=Inf,width=Inf)
 write_csv(by.package,delay.package.csv)
 
 # ===========================
+# Kolmogorov-Smirnov tests: are the two distributions different?
+# The two-sample K-S statistic D compares the empirical CDFs, which are shares, so groups of different
+# sizes are comparable; the sizes enter through the effective sample size n1*n2/(n1+n2), which sets
+# the critical value (5%: 1.358/sqrt(n_eff)). Delays fall on a lattice (quarter midpoints, monthly or
+# quarterly issues), so there are many ties, and the asymptotic p-value is conservative. The permutation
+# p-value (group labels reshuffled, sizes kept) is exact for the observed sizes and ties.
+# Comparisons: before vs after 2019; with vs without a package (all years, before, after).
+# Holm adjustment across journals, within each comparison and period.
+# ===========================
+
+ks_perm <- function(x, y, B=delay.ks.permutations) {
+  n1 <- length(x); n2 <- length(y)
+  out <- tibble(n1=n1, n2=n2)
+  if (n1 < 5 || n2 < 5) return(out)
+  D <- unname(suppressWarnings(ks.test(x,y,exact=FALSE))$statistic)
+  p.asy <- suppressWarnings(ks.test(x,y,exact=FALSE))$p.value
+  z <- c(x,y); grid <- sort(unique(z))
+  Dperm <- replicate(B, {
+    i <- sample.int(n1+n2, n1)
+    max(abs(ecdf(z[i])(grid) - ecdf(z[-i])(grid)))
+  })
+  n.eff <- n1*n2/(n1+n2)
+  out %>% mutate(n_eff=n.eff, D=D, D_crit_5=1.358/sqrt(n.eff),
+                 p_asymptotic=p.asy, p_permutation=(1+sum(Dperm >= D - 1e-12))/(B+1))
+}
+
+set.seed(20191002)
+ks.data <- delay.pkg.data %>% mutate(period=as.character(period))
+ks.tests <- bind_rows(
+  ks.data %>% group_by(Journal) %>%
+    group_modify(~ ks_perm(.x$delay_months[.x$year < delay.policy.year],
+                           .x$delay_months[.x$year >= delay.policy.year])) %>%
+    ungroup() %>% mutate(comparison=paste0("Before vs from ",delay.policy.year),period="All years",
+                         group1=paste0("Before ",delay.policy.year),group2=paste0(delay.policy.year," and later")),
+  bind_rows(ks.data %>% mutate(period="All years"), ks.data) %>%
+    group_by(Journal,period) %>%
+    group_modify(~ ks_perm(.x$delay_months[.x$has_package], .x$delay_months[!.x$has_package])) %>%
+    ungroup() %>% mutate(comparison="With vs without a package",
+                         group1="With a package",group2="Without")) %>%
+  group_by(comparison,period,pooled=Journal=="All journals") %>%
+  mutate(p_permutation_holm=if (first(pooled)) p_permutation else p.adjust(p_permutation,method="holm")) %>%
+  ungroup() %>% select(-pooled) %>%
+  mutate(significant=!is.na(p_permutation_holm) & p_permutation_holm < delay.alpha,
+         Journal=factor(Journal,levels=c(journal.order,"All journals"))) %>%
+  arrange(comparison,Journal,period) %>%
+  relocate(comparison,Journal,period,group1,group2)
+
+ks.tests %>% print(n=Inf,width=Inf)
+write_csv(ks.tests,delay.ks.csv)
+
+# ===========================
 # Figures
 # ===========================
 

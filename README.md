@@ -68,6 +68,10 @@ Before and after the 2019 AEA-wide policy is defined by year of publication. `ou
 
 `outputs/delay_by_package.csv` compares articles with and without a replication package, by journal (and all journals pooled), over all years and before and after 2019. It uses the same statistics as above (with minus without). `outputs/figures/figure_delay_by_package.*` shows the distributions: journals in rows, before and after the policy in columns. Articles without a package after 2019 are mostly exempt (no data or code) or not matched.
 
+### Kolmogorov–Smirnov tests
+
+`outputs/delay_ks.csv` compares the full distributions with two-sample Kolmogorov–Smirnov tests, by journal and pooled. It covers before vs. from 2019, and with vs. without a package (all years, before, after). *D* compares empirical CDFs, so groups of different sizes are comparable. The sizes enter through the effective sample size n₁n₂/(n₁+n₂) and the 5% critical value 1.358/√n_eff. Delays fall on a grid with many ties, so besides the asymptotic p-value there is a permutation p-value (`delay.ks.permutations` reshuffles of the group labels, sizes kept). It is Holm-adjusted across journals.
+
 ## Regressions: did the 2019 policy change packages or delays?
 
 `07_regressions.R` estimates OLS models with standard errors clustered by journal × year (CR1, t with G−1 df). It covers (a) whether a research article has a package (linear probability model, 2010 on, all journals) and (b) the delay in months (articles in `delay_articles.csv`). *post* is 1 from the implementation year on.
@@ -86,7 +90,7 @@ Outputs: `outputs/regressions_packages.csv` and `outputs/regressions_delay.csv` 
 
 ## Website
 
-`site/` is a Quarto website with a journal selector, covering packages over time, delay, and the regressions. It reads the CSV files in `outputs/`; its pre-render step `site/_prepare.R` copies and aggregates them. The site is built and published by GitHub Actions (`.github/workflows/site.yml`) in the project's container image, on every push to `main` that changes `site/` or `outputs/`. It is not built locally. Before the first build, set Settings → Pages → Source to "GitHub Actions". The analysis is not re-run on GitHub, so run the pipeline and commit `outputs/` first.
+`site/` is a Quarto website with a journal selector, covering packages over time, time from submission to publication, and the regressions. All tables are on its Data and methods page. It reads the CSV files in `outputs/`; its pre-render step `site/_prepare.R` copies and aggregates them. The site is built and published by GitHub Actions (`.github/workflows/site.yml`) in the project's container image, on every push to `main` that changes `site/` or `outputs/`. It is not built locally. Before the first build, set Settings → Pages → Source to "GitHub Actions". The analysis is not re-run on GitHub, so run the pipeline and commit `outputs/` first.
 
 ## Running
 

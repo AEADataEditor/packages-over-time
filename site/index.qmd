@@ -46,6 +46,6 @@ This site tracks the research articles published in the journals of the American
 ## Pages
 
 - **[Packages](packages.qmd)**: share and number of articles with a replication package, by journal and year.
-- **[Delay](delay.qmd)**: time from submission to print publication, by journal: before and after 2019, and for articles with and without a replication package.
-- **[Policy regressions](regressions.qmd)**: did the 2019 policy change the presence of packages or the delay? The page shows estimates at the actual implementation year and at placebo years.
-- **[Data and methods](methods.qmd)**: shares by policy period, and how articles and packages are identified.
+- **[Time from submission to publication](time-to-publication.qmd)**: months from submission to print publication, by journal: before and after 2019, and for articles with and without a replication package.
+- **[Policy regressions](regressions.qmd)**: did the 2019 policy change the presence of packages or the time from submission to publication? The page shows estimates at the actual implementation year and at placebo years.
+- **[Data and methods](methods.qmd)**: all tables, and how articles, packages, and submission dates are identified.

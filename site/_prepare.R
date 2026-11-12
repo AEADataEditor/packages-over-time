@@ -23,6 +23,6 @@ write_site <- function(df, f) {
 write_site(share, "share_by_journal_year.csv")
 
 for (f in c("packages_by_period.csv","delay_articles.csv","delay_by_year.csv","delay_tests.csv",
-            "delay_by_package.csv","regressions_packages.csv","regressions_delay.csv")) {
+            "delay_by_package.csv","delay_ks.csv","regressions_packages.csv","regressions_delay.csv")) {
   write_site(read_csv(file.path(outputs,f), show_col_types=FALSE), f)
 }

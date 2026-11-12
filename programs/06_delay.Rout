@@ -846,6 +846,290 @@ mutate: converted 'Journal' from character to factor (0 new NA)
 > write_csv(by.package,delay.package.csv)
 > 
 > # ===========================
+> # Kolmogorov-Smirnov tests: are the two distributions different?
+> # The two-sample K-S statistic D compares the empirical CDFs, which are shares, so groups of different
+> # sizes are comparable; the sizes enter through the effective sample size n1*n2/(n1+n2), which sets
+> # the critical value (5%: 1.358/sqrt(n_eff)). Delays fall on a lattice (quarter midpoints, monthly or
+> # quarterly issues), so there are many ties, and the asymptotic p-value is conservative. The permutation
+> # p-value (group labels reshuffled, sizes kept) is exact for the observed sizes and ties.
+> # Comparisons: before vs after 2019; with vs without a package (all years, before, after).
+> # Holm adjustment across journals, within each comparison and period.
+> # ===========================
+> 
+> ks_perm <- function(x, y, B=delay.ks.permutations) {
++   n1 <- length(x); n2 <- length(y)
++   out <- tibble(n1=n1, n2=n2)
++   if (n1 < 5 || n2 < 5) return(out)
++   D <- unname(suppressWarnings(ks.test(x,y,exact=FALSE))$statistic)
++   p.asy <- suppressWarnings(ks.test(x,y,exact=FALSE))$p.value
++   z <- c(x,y); grid <- sort(unique(z))
++   Dperm <- replicate(B, {
++     i <- sample.int(n1+n2, n1)
++     max(abs(ecdf(z[i])(grid) - ecdf(z[-i])(grid)))
++   })
++   n.eff <- n1*n2/(n1+n2)
++   out %>% mutate(n_eff=n.eff, D=D, D_crit_5=1.358/sqrt(n.eff),
++                  p_asymptotic=p.asy, p_permutation=(1+sum(Dperm >= D - 1e-12))/(B+1))
++ }
+> 
+> set.seed(20191002)
+> ks.data <- delay.pkg.data %>% mutate(period=as.character(period))
+mutate: converted 'period' from factor to character (0 new NA)
+> ks.tests <- bind_rows(
++   ks.data %>% group_by(Journal) %>%
++     group_modify(~ ks_perm(.x$delay_months[.x$year < delay.policy.year],
++                            .x$delay_months[.x$year >= delay.policy.year])) %>%
++     ungroup() %>% mutate(comparison=paste0("Before vs from ",delay.policy.year),period="All years",
++                          group1=paste0("Before ",delay.policy.year),group2=paste0(delay.policy.year," and later")),
++   bind_rows(ks.data %>% mutate(period="All years"), ks.data) %>%
++     group_by(Journal,period) %>%
++     group_modify(~ ks_perm(.x$delay_months[.x$has_package], .x$delay_months[!.x$has_package])) %>%
++     ungroup() %>% mutate(comparison="With vs without a package",
++                          group1="With a package",group2="Without")) %>%
++   group_by(comparison,period,pooled=Journal=="All journals") %>%
++   mutate(p_permutation_holm=if (first(pooled)) p_permutation else p.adjust(p_permutation,method="holm")) %>%
++   ungroup() %>% select(-pooled) %>%
++   mutate(significant=!is.na(p_permutation_holm) & p_permutation_holm < delay.alpha,
++          Journal=factor(Journal,levels=c(journal.order,"All journals"))) %>%
++   arrange(comparison,Journal,period) %>%
++   relocate(comparison,Journal,period,group1,group2)
+group_by: one grouping variable (Journal)
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+ungroup: no grouping variables remain
+mutate: new variable 'comparison' (character) with one unique value and 0% NA
+        new variable 'period' (character) with one unique value and 0% NA
+        new variable 'group1' (character) with one unique value and 0% NA
+        new variable 'group2' (character) with one unique value and 0% NA
+mutate: changed 4,964 values (100%) of 'period' (0 new NAs)
+group_by: 2 grouping variables (Journal, period)
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+mutate: new variable 'n_eff' (double) with one unique value and 0% NA
+        new variable 'D' (double) with one unique value and 0% NA
+        new variable 'D_crit_5' (double) with one unique value and 0% NA
+        new variable 'p_asymptotic' (double) with one unique value and 0% NA
+        new variable 'p_permutation' (double) with one unique value and 0% NA
+ungroup: no grouping variables remain
+mutate: new variable 'comparison' (character) with one unique value and 0% NA
+        new variable 'group1' (character) with one unique value and 0% NA
+        new variable 'group2' (character) with one unique value and 0% NA
+group_by: 3 grouping variables (comparison, period, pooled)
+mutate (grouped): new variable 'p_permutation_holm' (double) with 16 unique values and 7% NA
+ungroup: no grouping variables remain
+select: dropped one variable (pooled)
+mutate: converted 'Journal' from character to factor (0 new NA)
+        new variable 'significant' (logical) with 2 unique values and 0% NA
+relocate: columns reordered (comparison, Journal, period, group1, group2, …)
+> 
+> ks.tests %>% print(n=Inf,width=Inf)
+# A tibble: 27 × 14
+   comparison                Journal               period         group1        
+   <chr>                     <fct>                 <chr>          <chr>         
+ 1 Before vs from 2019       AER                   All years      Before 2019   
+ 2 Before vs from 2019       AER:Insights          All years      Before 2019   
+ 3 Before vs from 2019       AEJ:Applied Economics All years      Before 2019   
+ 4 Before vs from 2019       AEJ:Economic Policy   All years      Before 2019   
+ 5 Before vs from 2019       AEJ:Macro             All years      Before 2019   
+ 6 Before vs from 2019       AEJ:Micro             All years      Before 2019   
+ 7 Before vs from 2019       All journals          All years      Before 2019   
+ 8 With vs without a package AER                   2019 and later With a package
+ 9 With vs without a package AER                   All years      With a package
+10 With vs without a package AER                   Before 2019    With a package
+11 With vs without a package AER:Insights          2019 and later With a package
+12 With vs without a package AER:Insights          All years      With a package
+13 With vs without a package AEJ:Applied Economics 2019 and later With a package
+14 With vs without a package AEJ:Applied Economics All years      With a package
+15 With vs without a package AEJ:Applied Economics Before 2019    With a package
+16 With vs without a package AEJ:Economic Policy   2019 and later With a package
+17 With vs without a package AEJ:Economic Policy   All years      With a package
+18 With vs without a package AEJ:Economic Policy   Before 2019    With a package
+19 With vs without a package AEJ:Macro             2019 and later With a package
+20 With vs without a package AEJ:Macro             All years      With a package
+21 With vs without a package AEJ:Macro             Before 2019    With a package
+22 With vs without a package AEJ:Micro             2019 and later With a package
+23 With vs without a package AEJ:Micro             All years      With a package
+24 With vs without a package AEJ:Micro             Before 2019    With a package
+25 With vs without a package All journals          2019 and later With a package
+26 With vs without a package All journals          All years      With a package
+27 With vs without a package All journals          Before 2019    With a package
+   group2            n1    n2  n_eff       D D_crit_5 p_asymptotic p_permutation
+   <chr>          <int> <int>  <dbl>   <dbl>    <dbl>        <dbl>         <dbl>
+ 1 2019 and later   106   552  88.9   0.0668   0.144      8.23e- 1      0.677   
+ 2 2019 and later     0   186  NA    NA       NA         NA            NA       
+ 3 2019 and later    85   301  66.3   0.332    0.167      9.03e- 7      0.000100
+ 4 2019 and later   136   348  97.8   0.259    0.137      3.89e- 6      0.000100
+ 5 2019 and later    91   230  65.2   0.307    0.168      9.24e- 6      0.000100
+ 6 2019 and later   125   322  90.0   0.409    0.143      1.68e-13      0.000100
+ 7 2019 and later   543  1939 424.    0.153    0.0659     4.22e- 9      0.000100
+ 8 Without          443   109  87.5   0.243    0.145      6.46e- 5      0.000100
+ 9 Without          531   127 102.    0.249    0.134      5.75e- 6      0.000100
+10 Without           88    18  14.9   0.360    0.351      4.17e- 2      0.0228  
+11 Without          141    45  34.1   0.322    0.233      1.73e- 3      0.000200
+12 Without          141    45  34.1   0.322    0.233      1.73e- 3      0.000100
+13 Without          283    18  16.9   0.267    0.330      1.79e- 1      0.0601  
+14 Without          367    19  18.1   0.292    0.320      9.24e- 2      0.0286  
+15 Without           84     1  NA    NA       NA         NA            NA       
+16 Without          322    26  24.1   0.164    0.277      5.36e- 1      0.272   
+17 Without          450    34  31.6   0.147    0.242      4.98e- 1      0.259   
+18 Without          128     8   7.53  0.164    0.495      9.87e- 1      0.791   
+19 Without          195    35  29.7   0.231    0.249      8.48e- 2      0.0346  
+20 Without          277    44  38.0   0.137    0.220      4.71e- 1      0.225   
+21 Without           82     9   8.11  0.248    0.477      7.01e- 1      0.398   
+22 Without          145   177  79.7   0.186    0.152      7.83e- 3      0.00160 
+23 Without          182   265 108.    0.156    0.131      1.06e- 2      0.00220 
+24 Without           37    88  26.0   0.0759   0.266      9.98e- 1      0.899   
+25 Without         1529   410 323.    0.129    0.0755     4.20e- 5      0.000100
+26 Without         1948   534 419.    0.113    0.0663     4.71e- 5      0.000100
+27 Without          419   124  95.7   0.100    0.139      2.93e- 1      0.172   
+   p_permutation_holm significant
+                <dbl> <lgl>      
+ 1           0.677    FALSE      
+ 2          NA        FALSE      
+ 3           0.000500 TRUE       
+ 4           0.000500 TRUE       
+ 5           0.000500 TRUE       
+ 6           0.000500 TRUE       
+ 7           0.000100 TRUE       
+ 8           0.000600 TRUE       
+ 9           0.000600 TRUE       
+10           0.0912   FALSE      
+11           0.00100  TRUE       
+12           0.000600 TRUE       
+13           0.120    FALSE      
+14           0.0858   FALSE      
+15          NA        FALSE      
+16           0.272    FALSE      
+17           0.451    FALSE      
+18           1        FALSE      
+19           0.104    FALSE      
+20           0.451    FALSE      
+21           1        FALSE      
+22           0.00640  TRUE       
+23           0.00880  TRUE       
+24           1        FALSE      
+25           0.000100 TRUE       
+26           0.000100 TRUE       
+27           0.172    FALSE      
+> write_csv(ks.tests,delay.ks.csv)
+> 
+> # ===========================
 > # Figures
 > # ===========================
 > 
@@ -1255,4 +1539,4 @@ mutate: changed 0 values (0%) of 'Journal' (0 new NAs)
 > 
 > proc.time()
    user  system elapsed 
- 12.559   2.002  11.906 
+ 50.132   2.032  49.414 

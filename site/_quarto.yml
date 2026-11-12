@@ -14,8 +14,8 @@ website:
         text: Overview
       - href: packages.qmd
         text: Packages
-      - href: delay.qmd
-        text: Delay
+      - href: time-to-publication.qmd
+        text: Time from submission to publication
       - href: regressions.qmd
         text: Policy regressions
       - href: methods.qmd

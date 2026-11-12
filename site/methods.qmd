@@ -3,33 +3,168 @@ title: "Data and methods"
 ---
 
 ```{r}
-suppressMessages({library(readr); library(dplyr); library(knitr)})
-period <- read_csv("data/packages_by_period.csv", show_col_types=FALSE)
+suppressMessages({library(readr); library(dplyr); library(tidyr); library(knitr)})
+rd  <- function(f) read_csv(file.path("data", f), show_col_types=FALSE)
 pct <- function(x) paste0(round(100*x), "%")
-```
-
-## Share with a package, by policy period
-
-```{r}
-period %>%
-  transmute(Group=group, Period=period, Years=paste0(first_year,"-",last_year),
-            Articles=articles, `With a package`=articles_with_package, Share=pct(share)) %>%
-  kable()
-```
-
-## Articles with a package, by year
-
-All AEA journals. Years are years of print publication; the current, incomplete year is not shown.
-
-```{r}
-read_csv("data/share_by_journal_year.csv", show_col_types=FALSE) %>%
-  filter(Journal=="All journals") %>%
-  transmute(Year=as.character(year), Articles=articles, `With a package`=with_package, Share=pct(share)) %>%
-  kable(align="lrrr")
+num <- function(x, d=1) ifelse(is.na(x), "–", formatC(x, format="f", digits=d))
+sgn <- function(x, d=1) ifelse(is.na(x), "–", sprintf(paste0("%+.", d, "f"), x))
+ci  <- function(lo, hi, d=1) ifelse(is.na(lo), "–", paste0("[", num(lo, d), ", ", num(hi, d), "]"))
+pv  <- function(p) ifelse(is.na(p), "–", ifelse(p < 0.001, "< 0.001", sprintf("%.3f", p)))
+journal.order <- c("AER","AER:Insights","AEA P&P","AEJ:Applied Economics","AEJ:Economic Policy",
+                   "AEJ:Macro","AEJ:Micro","JEL","JEP","All journals")
 ```
 
 ## Methods in brief
 
 - **Articles:** research articles come from Crossref. Front matter, book reviews, and editorial and administrative items are dropped. Before 2018, the Papers and Proceedings (P&P) appeared as the May issue of the AER; here they are counted as AEA P&P.
 - **Packages:** a package is an openICPSR project. It is matched to an article through the migration of historical supplements, a DataCite link, a citation in the article's reference list, or a deposit titled "Data and Code for: *article title*".
-- **Delay:** submission dates come from manuscript-number DOIs (since 2015).
+- **Time from submission to publication:** the submission year and manuscript number come from manuscript-number DOIs (since 2015). The quartiles of the manuscript numbers give the submission quarter. Publication is the month of the print issue.
+- **Years:** unless stated otherwise, years are years of print publication. Tables cover complete years only.
+
+## Replication packages
+
+**Table 1. Share of research articles with a replication package, by policy period**
+
+```{r}
+rd("packages_by_period.csv") %>%
+  transmute(Group=group, Period=period, Years=paste0(first_year,"–",last_year),
+            Articles=articles, `With a package`=articles_with_package, Share=pct(share)) %>%
+  kable(align="lllrrr")
+```
+
+**Table 2. Research articles with a replication package, by year, all AEA journals**
+
+```{r}
+rd("share_by_journal_year.csv") %>%
+  filter(Journal=="All journals") %>%
+  transmute(Year=as.character(year), Articles=articles, `With a package`=with_package, Share=pct(share)) %>%
+  kable(align="lrrr")
+```
+
+## Time from submission to publication
+
+Months, by journal. The P&P, JEL and JEP are not included (no submission-based manuscript numbers). Before and after are defined by year of publication.
+
+**Table 3. Before and after the 2019 policy**
+
+The shift is the Hodges–Lehmann estimate (after minus before). The mean difference has a Welch 95% confidence interval. p-values are from the Wilcoxon rank-sum test, Holm-adjusted across journals. The 2020 cutoff is a robustness check.
+
+```{r}
+rd("delay_tests.csv") %>%
+  mutate(Journal=factor(Journal, levels=journal.order)) %>% arrange(cutoff, Journal) %>%
+  transmute(Cutoff=as.character(cutoff), Journal, `n before`=n_pre, `n after`=n_post,
+            `Median before`=num(median_pre, 0), `Median after`=num(median_post, 0),
+            Shift=sgn(shift, 0), `Mean difference`=sgn(mean_diff), `95% CI`=ci(mean_diff_lo, mean_diff_hi),
+            `p (Holm)`=pv(p_wilcox_holm)) %>%
+  kable(align="llrrrrrrrr")
+```
+
+**Table 4. Articles with and without a replication package**
+
+Differences are "with" minus "without". Statistics are as in Table 3. Articles without a package include those exempt from the policy (no data or code) and those whose package was not matched.
+
+```{r}
+rd("delay_by_package.csv") %>%
+  mutate(Journal=factor(Journal, levels=journal.order)) %>% arrange(Journal) %>%
+  transmute(Journal, Period=period, `n with`=n_package, `n without`=n_no_package,
+            `Median with`=num(median_package, 0), `Median without`=num(median_no_package, 0),
+            `Mean difference`=sgn(mean_diff), `95% CI`=ci(mean_diff_lo, mean_diff_hi),
+            `p (Holm)`=pv(p_wilcox_holm)) %>%
+  kable(align="llrrrrrrr")
+```
+
+**Table 5. Kolmogorov–Smirnov tests: are the two distributions different?**
+
+*D* is the largest gap between the two empirical cumulative distributions. Each distribution is a set of shares, so groups of different sizes are comparable. The sizes enter through the effective sample size *n*₁*n*₂/(*n*₁+*n*₂): the 5% critical value is 1.358/√*n*~eff~. Times fall on a grid and have many ties, which makes the asymptotic p-value conservative. The permutation p-value comes from 10,000 reshuffles of the group labels, keeping both group sizes. It is exact for the observed sizes and ties, and is Holm-adjusted across journals within each comparison and period. Groups with fewer than 5 articles are not tested.
+
+```{r}
+rd("delay_ks.csv") %>%
+  mutate(Journal=factor(Journal, levels=journal.order)) %>% arrange(comparison, Journal, period) %>%
+  transmute(Comparison=comparison, Journal, Period=period, n1, n2, `n eff`=num(n_eff, 0),
+            D=num(D, 3), `5% critical D`=num(D_crit_5, 3), `p asymptotic`=pv(p_asymptotic),
+            `p permutation (Holm)`=pv(p_permutation_holm),
+            Different=ifelse(is.na(D), "–", ifelse(significant, "yes", "no"))) %>%
+  kable(align="lllrrrrrrrl")
+```
+
+## Policy regressions
+
+**Table 6. Specifications**
+
+All models are OLS, with standard errors clustered by journal × year of publication (CR1). *post* is 1 for articles published in or after the implementation year (actual: 2019; placebos: 2017 and 2018 on years before 2019 only, and 2020 and 2021 on years from 2019 on only). Trends are linear in publication year, centered on the cutoff. Outcomes: (a) the article has a replication package (linear probability model, 2010 on, all journals); (b) months from submission to publication.
+
+| Label | Model | Used for |
+|---|---|---|
+| Journal FE | *y* = *post* + journal fixed effects | (a), (b); all journals pooled |
+| Journal FE + journal trends | adds a linear trend for each journal | (a), (b); all journals pooled |
+| DiD (year FE) | *post* × *newly covered* + journal and year fixed effects. Newly covered: P&P, JEL, JEP. Comparison: AER and AEJs. AER:Insights is excluded. | (a); pooled |
+| DiD + group trends | adds a linear trend for each of the two groups | (a); pooled |
+| Post × has package | *post* × *has package* + journal fixed effects | (b); pooled |
+| Before/after (no trend) | *y* = *post* + intercept (the journal fixed effect of a single journal) | (a), (b); one journal |
+| Before/after + linear trend | adds one linear trend | (a), (b); one journal |
+
+```{r}
+spec.labels <- c(its_fe="Journal FE", its_trend="Journal FE + journal trends",
+                 did="DiD (year FE)", did_trend="DiD + group trends", pkg="Post x has package")
+spec.single <- c(its_fe="Before/after (no trend)", its_trend="Before/after + linear trend")
+cell <- function(est, lo, hi, p, scale=1)
+  paste0(sgn(scale*est), ifelse(p < 0.05, "*", ""), " ", ci(scale*lo, scale*hi))
+pooled_table <- function(r, scale=1) {
+  r %>% filter(Journal=="All journals") %>%
+    mutate(Specification=factor(spec.labels[spec], levels=spec.labels),
+           value=cell(estimate, lo, hi, p, scale)) %>%
+    select(Specification, cutoff, value) %>%
+    pivot_wider(names_from=cutoff, values_from=value) %>%
+    arrange(Specification) %>%
+    select(Specification, `2017`, `2018`, `2019`, `2020`, `2021`)
+}
+journal_table <- function(r, scale=1) {
+  r %>% filter(Journal!="All journals") %>%
+    mutate(Journal=factor(Journal, levels=journal.order),
+           Specification=factor(spec.single[spec], levels=spec.single)) %>%
+    arrange(Journal, Specification, cutoff) %>%
+    transmute(Journal, Specification,
+              Year=paste0(cutoff, ifelse(type=="actual", "", " (placebo)")),
+              Sample=paste0(first_year, "–", last_year), n, Clusters=n_clusters,
+              `Mean before`=num(scale*mean_pre), Estimate=sgn(scale*estimate),
+              `95% CI`=ci(scale*lo, scale*hi), p=pv(p))
+}
+reg.pkg   <- rd("regressions_packages.csv")
+reg.delay <- rd("regressions_delay.csv")
+```
+
+**Table 7. Replication package, all journals pooled (percentage points)**
+
+Each cell shows the estimate, then the 95% confidence interval. \* marks p < 0.05. 2019 is the actual implementation year; the other columns are placebos.
+
+```{r}
+kable(pooled_table(reg.pkg, scale=100))
+```
+
+**Table 8. Time from submission to publication, all journals pooled (months)**
+
+As Table 7.
+
+```{r}
+kable(pooled_table(reg.delay))
+```
+
+**Table 9. Replication package, by journal (percentage points)**
+
+::: {.callout-note collapse="true" appearance="minimal"}
+## Show Table 9
+
+```{r}
+kable(journal_table(reg.pkg, scale=100), align="lllllrrrrrr")
+```
+:::
+
+**Table 10. Time from submission to publication, by journal (months)**
+
+::: {.callout-note collapse="true" appearance="minimal"}
+## Show Table 10
+
+```{r}
+kable(journal_table(reg.delay), align="lllllrrrrrr")
+```
+:::

@@ -160,3 +160,12 @@ These notes come from a second Claude Code session, which added the package spli
 - **First site build:** not yet run. Pages must be set to "GitHub Actions" in the repository settings. The pages were not rendered locally, so check the first Actions run (OJS syntax, Plot facets).
 - **Wild cluster bootstrap:** would give better few-cluster inference, especially for single-journal estimates.
 - **Event-study plot by year:** would show the timing directly, beyond single placebo cutoffs.
+
+## Follow-up (same session)
+
+- **K-S tests (`delay_ks.csv`):**
+  - **Before vs. from 2019:** the AEJs differ (D 0.26–0.41, permutation p < 0.001). The AER does not (D 0.07, p 0.68).
+  - **With vs. without a package:** AER, AER:Insights and AEJ:Micro differ, but only from 2019 on, or pooled over all years. Before 2019, no journal differs after the Holm adjustment.
+  - **Ties:** the asymptotic K-S p-value is conservative with many ties. The permutation p is used for the significance calls.
+- **Single-journal regressions:** "Journal FE" there is only an intercept, so the estimate is a difference in means, with standard errors clustered by year. The site now labels these "Before/after (no trend)" and "Before/after + linear trend".
+- **Regression years:** all regressions use publication year for *post*, trends and clusters. A submission-year version would need an assignment rule, because the policy applies at acceptance, not submission. It would also suffer from right truncation of recent submission cohorts.

@@ -1,0 +1,113 @@
+---
+title: "Time from submission to publication"
+---
+
+## Computing time from submission to publication
+
+Since 2015, AER and AEJ DOIs, and AER:Insights DOIs from its start in 2019, are based on the manuscript number. For example, `10.1257/aer.20151234` was submitted in 2015, as manuscript 1234 of that year. Within a submission year, the quartiles of the manuscript numbers give the *submission quarter*. Publication month is taken from CrossRef. Time is computed  from the *middle month* of that quarter to the month of the print issue. P&P are excluded (there are deterministic submission and publication months), and JEL, and JEP are excluded (different submission mechanisms). Only publication years in which (nearly) all articles come from fully observed submission years are used. The [README](https://github.com/AEADataEditor/packages-over-time#delay-from-submission-to-publication) has the details.
+
+The thread through the different analyses is: Has strengthened enforcement of the AEA's data (and code) availability policy, implemented in 2019 affected the time from submission to publication?
+
+## Results
+
+```{ojs}
+//| echo: false
+delay = FileAttachment("data/delay_articles.csv").csv({typed: true})
+byYear = FileAttachment("data/delay_by_year.csv").csv({typed: true})
+ks = FileAttachment("data/delay_ks.csv").csv({typed: true})
+djournals = ["AER","AER:Insights","AEJ:Applied Economics","AEJ:Economic Policy","AEJ:Macro","AEJ:Micro"]
+viewof dj = Inputs.select(djournals, {label: "Journal", value: "AER"})
+viewof split = Inputs.radio(["Before / after 2019", "With / without a replication package"],
+                            {label: "Compare", value: "Before / after 2019"})
+```
+
+```{ojs}
+//| echo: false
+dsel = delay.filter(d => d.Journal === dj)
+groups = split.startsWith("Before")
+  ? [{name: "Before 2019", color: "#2F6DB5", f: d => d.year < 2019},
+     {name: "2019 and later", color: "#C2611F", f: d => d.year >= 2019}]
+  : [{name: "With a package", color: "#1B4F8A", f: d => d.has_package},
+     {name: "Without", color: "#6b6b6b", f: d => !d.has_package}]
+gdata = groups.map((g, i) => ({...g, id: `hatch-${i}`, angle: i === 0 ? 45 : -45,
+                              rows: dsel.filter(g.f)})).filter(g => g.rows.length > 0)
+thresholds = d3.range(-6, 102, 3)
+{
+  // overlapping histograms, each hatched in its own color and direction (crosshatched where they overlap)
+  const chart = Plot.plot({
+    width, height: 360, marginLeft: 50, marginBottom: 45,
+    x: {label: "Months from submission to print publication", domain: [-6, 96], ticks: d3.range(0, 97, 12)},
+    y: {label: "Share of articles (%)", grid: true, percent: true},
+    marks: [
+      ...gdata.map(g => Plot.rectY(g.rows, Plot.binX({y: "proportion"},
+          {x: "delay_months", thresholds, fill: `url(#${g.id})`, stroke: g.color, strokeWidth: 1.2, inset: 0}))),
+      ...gdata.map(g => Plot.ruleX([d3.median(g.rows, d => d.delay_months)], {stroke: g.color, strokeWidth: 1.5, strokeDasharray: "5,3"})),
+      Plot.ruleY([0])
+    ]
+  });
+  const defs = gdata.map(g => `<pattern id="${g.id}" patternUnits="userSpaceOnUse" width="6" height="6"
+      patternTransform="rotate(${g.angle})"><line x1="0" y1="0" x2="0" y2="6" stroke="${g.color}" stroke-width="2"/></pattern>`).join("");
+  chart.insertAdjacentHTML("afterbegin", `<defs>${defs}</defs>`);
+  const swatch = g => `<span style="display:inline-flex;align-items:center;gap:6px;margin-right:18px">
+      <svg width="16" height="16"><rect width="15" height="15" x="0.5" y="0.5" fill="url(#${g.id})" stroke="${g.color}"/></svg>
+      ${g.name} (n = ${g.rows.length})</span>`;
+  const wrap = document.createElement("div");
+  wrap.innerHTML = `<div style="font-weight:600;font-size:1.05rem;margin-bottom:4px">${dj}: time from submission
+    to publication (share of articles in each 3-month bin)</div>
+    <div style="font-size:0.85rem;margin-bottom:6px">${gdata.map(swatch).join("")}</div>`;
+  wrap.append(chart);
+  return wrap;
+}
+```
+
+```{ojs}
+//| echo: false
+pstr = p => p < 0.001 ? "< 0.001" : "= " + p.toFixed(3)
+ksRows = ks.filter(d => d.Journal === dj &&
+  (split.startsWith("Before") ? d.comparison.startsWith("Before") : d.comparison.startsWith("With")))
+md`**Kolmogorov–Smirnov test** (are the two distributions different?):
+
+${ksRows.map(d => (d.D === null || d.D === undefined)
+    ? `- ${d.period}: not tested (n = ${d.n1} and ${d.n2}).`
+    : `- ${d.period}: D = ${d.D.toFixed(2)} (5% critical value for these sample sizes: ${d.D_crit_5.toFixed(2)}); permutation p ${pstr(d.p_permutation_holm)}, Holm-adjusted across journals: ${d.significant ? "**different**" : "not significantly different"}.`).join("\n")}
+
+All test statistics are in Tables 3–5 on [Data and methods](methods.qmd).`
+```
+
+Dashed vertical lines show the medians. For the AEJs, times fall on a 3-month grid (quarterly issues).
+
+The K-S statistic *D* is the largest gap between the two cumulative distributions. These are shares of articles, so groups of different sizes can be compared directly. The sizes enter through the critical value, which shrinks with the effective sample size *n*₁*n*₂/(*n*₁+*n*₂): with a small group, only a large gap is significant. Times fall on a grid and have many ties, so the p-value comes from 10,000 permutations of the group labels, keeping the two group sizes, rather than from the asymptotic formula.
+
+## Mean time by year
+
+The selected journal is in color and the other journals are in grey. Bars show 95% confidence intervals. By submission year, hollow points mark years still being published: they miss their slowest papers, so their means are too low.
+
+```{ojs}
+//| echo: false
+viewof view = Inputs.radio(["publication year", "submission year"], {label: "By", value: "publication year"})
+```
+
+```{ojs}
+//| echo: false
+yv = byYear.filter(d => d.view === view)
+Plot.plot({
+  width, height: 340, marginLeft: 50, marginBottom: 45,
+  x: {label: `Year of ${view.split(" ")[0]}`, tickFormat: "d"},
+  y: {label: "Mean time (months)", grid: true, domain: [0, d3.max(yv, d => d.hi) * 1.05]},
+  marks: [
+    view === "publication year" ? Plot.ruleX([2018.5], {stroke: "#44546A", strokeDasharray: "4,3"}) : null,
+    Plot.line(yv.filter(d => d.Journal !== dj), {x: "year", y: "mean", z: "Journal", stroke: "#cccccc"}),
+    Plot.ruleX(yv.filter(d => d.Journal === dj), {x: "year", y1: "lo", y2: "hi", stroke: "#44546A", strokeOpacity: 0.6}),
+    Plot.line(yv.filter(d => d.Journal === dj), {x: "year", y: "mean", stroke: "#44546A", strokeWidth: 1.8}),
+    Plot.dot(yv.filter(d => d.Journal === dj), {x: "year", y: "mean", stroke: "#44546A",
+             fill: d => d.complete ? "#44546A" : "white", r: 3.5,
+             channels: {n: "n", median: "median"}, tip: {format: {x: "d"}}})
+  ]
+})
+```
+
+## How to read this
+
+- **AER:** no change in the time from submission to publication after 2019.
+- **AEJs:** times are 3–7 months longer after 2019 than before. But the increase is gradual, from 2017 to 2022, not a step at 2019. For AEJ:Applied and AEJ:Micro it starts with papers submitted in 2017. A publication backlog in 2021–22 and COVID fall in the same window. The [policy regressions](regressions.qmd) test this with placebo years.
+- **With versus without a package:** AER articles with a package take about 6 months longer, but they did so before 2019 as well. Articles without a package include those exempt from the policy (no data or code) and those whose package was not matched.

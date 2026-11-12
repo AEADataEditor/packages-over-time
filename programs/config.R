@@ -124,3 +124,6 @@ reg.pkg.excluded  <- c("AER:Insights")
 # Outputs
 reg.packages.csv  <- file.path(Outputs,"regressions_packages.csv")
 reg.delay.csv     <- file.path(Outputs,"regressions_delay.csv")
+# Kolmogorov-Smirnov tests of the delay distributions, with permutation p-values
+delay.ks.permutations <- 10000L
+delay.ks.csv       <- file.path(Outputs,"delay_ks.csv")
