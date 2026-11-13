@@ -63,8 +63,12 @@ export function eventPlot(Plot, width, es, j, trend, {scale = 1, ylabel, title})
       Plot.ruleX([2018.5], {stroke: "#44546A", strokeDasharray: "4,3"}),
       Plot.ruleX(d.filter(e => e.lo95 != null), {x: "year", y1: "lo95", y2: "hi95", stroke: "kind", strokeWidth: 2.5}),
       Plot.line(d, {x: "year", y: "est", stroke: "#bbb", strokeWidth: 1}),
-      Plot.dot(d, {x: "year", y: "est", fill: d => (trend !== "rolling" && d.year === 2018) ? "white" : null,
-                   stroke: "kind", r: 4.5, strokeWidth: 2,
+      // filled points; the reference year (2018, except for the rolling trend) is hollow
+      Plot.dot(d, {x: "year", y: "est", fill: "kind", r: 4.5,
+                   filter: e => trend === "rolling" || e.year !== 2018}),
+      Plot.dot(d, {x: "year", y: "est", fill: "white", stroke: "kind", r: 4.5, strokeWidth: 2,
+                   filter: e => trend !== "rolling" && e.year === 2018}),
+      Plot.dot(d, {x: "year", y: "est", r: 6, fillOpacity: 0, strokeOpacity: 0,
                    channels: {Articles: "n_year", p: e => e.p == null ? "reference" : e.p.toFixed(3),
                               "95% CI": e => e.lo95 == null ? "" : `${e.lo95.toFixed(1)} to ${e.hi95.toFixed(1)}`},
                    tip: {format: {x: "d", y: v => v.toFixed(2), stroke: false, fill: false}}})
