@@ -6,11 +6,11 @@ subtitle: "Coverage over time, time from submission to publication, and the 2019
 ```{ojs}
 //| echo: false
 shareRaw = FileAttachment("data/share_by_journal_year.csv").csv({typed: true})
-shareAll = shareRaw.filter(d => d.Journal === "All journals")
+shareAll = shareRaw.filter(d => d.Journal === "Main journals")
 policyLines = [{year: 2005, label: "2005: AER policy"}, {year: 2009, label: "2009: AEJs"},
                {year: 2019, label: "2019: AEA-wide"}]
 Plot.plot({
-  title: "Research articles in AEA journals, and articles with a replication package, by year",
+  title: "Research articles in the AER, AER:Insights and AEJs, and articles with a replication package, by year",
   width, height: 400, marginLeft: 50,
   x: {label: null, tickFormat: "d"},
   y: {label: "Articles", grid: true},
@@ -38,7 +38,7 @@ html`<div class="fig-notes">
 <p>Dashed vertical lines: 2005 (AER data policy), 2009 (AEJs launched), 2019 (AEA-wide policy).</p>
 <p>Research articles: Crossref, excluding front matter, book reviews, and editorial/administrative notes. P&P articles printed in the May AER through 2017 are counted as AEA P&P.</p>
 <p>Replication packages: AEA Data and Code Repository at openICPSR (DataCite links and titles, article references, migrated supplements).</p>
-<p>All AEA journals. By year of print publication, ${d3.min(shareAll, d => d.year)}–${d3.max(shareAll, d => d.year)}.</p>
+<p>AER, AER:Insights (from 2019) and AEJs (from 2009). The P&P, JEL and JEP are on the <a href="appendix.html">Appendix</a> page. By year of print publication, ${d3.min(shareAll, d => d.year)}–${d3.max(shareAll, d => d.year)}.</p>
 </div>`
 ```
 
@@ -50,20 +50,21 @@ The AER, excluding the P&P printed in the May issue through 2017. The notes are 
 
 ```{r}
 suppressMessages({library(readr); library(dplyr)})
-all  <- read_csv("data/share_by_journal_year.csv", show_col_types=FALSE) %>% filter(Journal=="All journals")
+all  <- read_csv("data/share_by_journal_year.csv", show_col_types=FALSE) %>% filter(Journal=="Main journals")
 last <- max(all$year)
 pct  <- function(x) paste0(round(100*x), "%")
 ```
 
-This site tracks the research articles published in the journals of the American Economic Association (AEA) since 1999. It shows how many have a replication package in the [AEA Data and Code Repository](https://www.openicpsr.org/openicpsr/aea) at openICPSR.
+This site tracks the research articles published in the journals of the American Economic Association (AEA) since 1999. It shows how many have a replication package in the [AEA Data and Code Repository](https://www.openicpsr.org/openicpsr/aea) at openICPSR. The main analysis covers the AER, AER:Insights and the four AEJs. The AEA Papers and Proceedings, the JEL and the JEP are reported separately on the [Appendix](appendix.qmd) page. Comments, replies and errata are not counted as research articles.
 
-- In `r last`, `r pct(all$share[all$year==last])` of the `r all$articles[all$year==last]` research articles had a replication package. In 1999, `r pct(all$share[all$year==1999])` did.
+- In `r last`, `r pct(all$share[all$year==last])` of the `r all$articles[all$year==last]` research articles in the AER, AER:Insights and AEJs had a replication package. In 1999 (AER only), `r pct(all$share[all$year==1999])` did.
 - The AER introduced a data policy in 2005. The AEJs had one from their launch in 2009. The AEA-wide policy, with review by the AEA Data Editor, took effect in 2019.
 
 ## Pages
 
 - **[Packages](packages.qmd)**: share and number of articles with a replication package, by journal and year.
 - **[Time from submission to publication](time-to-publication.qmd)**: months from submission to print publication, by journal: before and after 2019, and for articles with and without a replication package.
-- **[Policy regressions](regressions.qmd)**: did the 2019 policy change the presence of packages or the time from submission to publication? The page shows estimates at the actual implementation year and at placebo years.
+- **[Policy regressions](regressions.qmd)**: did the 2019 policy change the presence of packages or the time from submission to publication? Event studies by year of publication, with static before/after regressions at the actual and placebo implementation years as robustness.
+- **[Appendix](appendix.qmd)**: the AEA P&P, JEL and JEP: packages over time, and the policy regressions, including the difference in differences that uses them as newly covered journals.
 - **[Methods](methods.qmd)**: all tables, the regression equations, and how articles, packages, and submission dates are identified.
 - **[Data](data.qmd)**: the full article-level dataset, with the flags used in the analysis and the DOIs of articles and replication packages. Searchable and downloadable.

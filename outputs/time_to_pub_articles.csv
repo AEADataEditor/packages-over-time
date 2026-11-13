@@ -417,7 +417,6 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/mic.20160129,Markets with Multidimensional Private Information,AEJ:Micro,2018,5,2016,129,2,24,Published before 2019,FALSE
 10.1257/mic.20160141,Majority Choice of an Income-Targeted Educational Voucher,AEJ:Micro,2018,11,2016,141,2,30,Published before 2019,TRUE
 10.1257/mic.20160178,Honest Equilibria in Reputation Games: The Role of Time Preferences,AEJ:Micro,2018,2,2016,178,2,21,Published before 2019,FALSE
-10.1257/mic.20160187,Reverse Bayesianism: A Comment,AEJ:Micro,2018,2,2016,187,2,21,Published before 2019,FALSE
 10.1257/mic.20160190,Preferences and Social Influence,AEJ:Micro,2018,8,2016,190,2,27,Published before 2019,FALSE
 10.1257/mic.20160222,A Foundation for Efficiency Wage Contracts,AEJ:Micro,2018,11,2016,222,2,30,Published before 2019,FALSE
 10.1257/mic.20160230,Contracts with Framing,AEJ:Micro,2018,8,2016,230,3,24,Published before 2019,FALSE
@@ -491,29 +490,25 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20160696,"The Race between Man and Machine: Implications of Technology for Growth, Factor Shares, and Employment",AER,2018,6,2016,696,2,25,Published before 2019,TRUE
 10.1257/aer.20160763,The Long-Run Effects of Disruptive Peers,AER,2018,11,2016,763,2,30,Published before 2019,TRUE
 10.1257/aer.20160782,Asset Bubbles and Credit Constraints,AER,2018,9,2016,782,2,28,Published before 2019,FALSE
-10.1257/aer.20160789,Violence and Risk Preference: Experimental Evidence from Afghanistan: Comment,AER,2018,8,2016,789,2,27,Published before 2019,TRUE
 10.1257/aer.20160816,The Optimal Timing of Unemployment Benefits: Theory and Evidence from Sweden,AER,2018,4,2016,816,2,23,Published before 2019,TRUE
 10.1257/aer.20160848,"Mismatch of Talent: Evidence on Match Quality, Entry Wages, and Job Mobility",AER,2018,11,2016,848,2,30,Published before 2019,TRUE
 10.1257/aer.20160863,Trucks without Bailouts: Equilibrium Product Characteristics for Commercial Vehicles,AER,2018,6,2016,863,2,25,Published before 2019,TRUE
 10.1257/aer.20160921,Government Old-Age Support and Labor Supply: Evidence from the Old Age Assistance Program,AER,2018,8,2016,921,2,27,Published before 2019,TRUE
 10.1257/aer.20160945,Inference in Regression Discontinuity Designs with a Discrete Running Variable,AER,2018,8,2016,945,2,27,Published before 2019,FALSE
-10.1257/aer.20160970,An Efficient Ascending-Bid Auction for Multiple Objects: Comment,AER,2018,2,2016,970,2,21,Published before 2019,FALSE
 10.1257/aer.20161014,"Health Care Access, Costs, and Treatment Dynamics: Evidence from <i>In Vitro</i> Fertilization",AER,2018,12,2016,1014,3,28,Published before 2019,TRUE
 10.1257/aer.20161038,The Economic Consequences of Hospital Admissions,AER,2018,2,2016,1038,3,18,Published before 2019,TRUE
 10.1257/aer.20161048,Corporate Finance and Monetary Policy,AER,2018,4,2016,1048,3,20,Published before 2019,TRUE
 10.1257/aer.20161079,The Design and Price of Information,AER,2018,1,2016,1079,3,17,Published before 2019,FALSE
-10.1257/aer.20161124,"Family Ruptures, Stress, and the Mental Health of the Next Generation: Comment",AER,2018,4,2016,1124,3,20,Published before 2019,FALSE
 10.1257/aer.20161151,From Final Goods to Inputs: The Protectionist Effect of Rules of Origin,AER,2018,8,2016,1151,3,24,Published before 2019,TRUE
 10.1257/aer.20161352,Moved to Opportunity: The Long-Run Effects of Public Housing Demolition on Children,AER,2018,10,2016,1352,3,26,Published before 2019,TRUE
 10.1257/aer.20161413,Why Did the Democrats Lose the South? Bringing New Data to an Old Debate,AER,2018,10,2016,1413,3,26,Published before 2019,TRUE
 10.1257/aer.20161420,Aggregate Recruiting Intensity,AER,2018,8,2016,1420,3,24,Published before 2019,TRUE
-10.1257/aer.20161492,Certified Random: A New Order for Coauthorship,AER,2018,2,2016,1492,3,18,Published before 2019,FALSE
+10.1257/aer.20161492,Certified Random: A New Order for Coauthorship,AER,2018,2,2016,1492,4,15,Published before 2019,FALSE
 10.1257/aer.20161495,The “Pupil” Factory: Specialization and the Production of Human Capital in Schools,AER,2018,3,2016,1495,4,16,Published before 2019,TRUE
 10.1257/aer.20161503,"The Effects of Pre-Trial Detention on Conviction, Future Crime, and Employment: Evidence from Randomly Assigned Judges",AER,2018,2,2016,1503,4,15,Published before 2019,TRUE
 10.1257/aer.20161534,Disentangling the Effects of a Banking Crisis: Evidence from German Firms and Counties,AER,2018,3,2016,1534,4,16,Published before 2019,TRUE
 10.1257/aer.20161553,Lying Aversion and the Size of the Lie,AER,2018,2,2016,1553,4,15,Published before 2019,TRUE
 10.1257/aer.20161570,Do Recessions Accelerate Routine-Biased Technological Change? Evidence from Vacancy Postings,AER,2018,7,2016,1570,4,20,Published before 2019,TRUE
-10.1257/aer.20161605,"Family Ruptures, Stress, and the Mental Health of the Next Generation: Reply",AER,2018,4,2016,1605,4,17,Published before 2019,TRUE
 10.1257/aer.20161696,Investment Strategy and Selection Bias: An Equilibrium Perspective on Overoptimism,AER,2018,6,2016,1696,4,19,Published before 2019,FALSE
 10.1257/aer.20161749,Marking to Market versus Taking to Market,AER,2018,8,2016,1749,4,21,Published before 2019,FALSE
 10.1257/aer.20161852,Narrative Sign Restrictions for SVARs,AER,2018,10,2016,1852,4,23,Published before 2019,TRUE
@@ -525,7 +520,6 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20170133,The Nexus of Monetary Policy and Shadow Banking in China,AER,2018,12,2017,133,1,22,Published before 2019,TRUE
 10.1257/aer.20170299,Evaluating Strategic Forecasters,AER,2018,10,2017,299,1,20,Published before 2019,FALSE
 10.1257/aer.20170404,Enfranchising Your Own? Experimental Evidence on Bureaucrat Diversity and Election Bias in India,AER,2018,6,2017,404,1,16,Published before 2019,TRUE
-10.1257/aer.20170413,Testing Efficient Risk Sharing with Heterogeneous Risk Preferences: Comment,AER,2018,10,2017,413,1,20,Published before 2019,TRUE
 10.1257/aer.20170416,The Logic of Insurgent Electoral Violence,AER,2018,11,2017,416,1,21,Published before 2019,TRUE
 10.1257/aer.20170748,Escaping Malthus: Economic Growth and Fertility Change in the Developing World,AER,2018,6,2017,748,2,13,Published before 2019,TRUE
 10.1257/aer.20170765,Immigration Restrictions as Active Labor Market Policy: Evidence from the Mexican Bracero Exclusion,AER,2018,6,2017,765,2,13,Published before 2019,TRUE
@@ -536,12 +530,8 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20171218,Consumer Price Search and Platform Design in Internet Commerce,AER,2018,7,2017,1218,3,11,Published before 2019,TRUE
 10.1257/aer.20171330,Measuring and Bounding Experimenter Demand,AER,2018,11,2017,1330,3,15,Published before 2019,TRUE
 10.1257/aer.20171339,The Costs of Patronage: Evidence from the British Empire,AER,2018,11,2017,1339,3,15,Published before 2019,TRUE
-10.1257/aer.20171408,An Efficient Ascending-Bid Auction for Multiple Objects: Reply,AER,2018,2,2017,1408,3,6,Published before 2019,FALSE
 10.1257/aer.20171526,Time versus State in Insurance: Experimental Evidence from Contract Farming in Kenya,AER,2018,12,2017,1526,3,16,Published before 2019,TRUE
 10.1257/aer.20171676,Why Do Defaults Affect Behavior? Experimental Evidence from Afghanistan,AER,2018,10,2017,1676,4,11,Published before 2019,TRUE
-10.1257/aer.20172018,A Price Theory of Multi-Sided Platforms: Comment,AER,2018,9,2017,2018,4,10,Published before 2019,FALSE
-10.1257/aer.20180041,Testing Efficient Risk Sharing with Heterogeneous Risk Preferences: Reply,AER,2018,10,2018,41,1,8,Published before 2019,TRUE
-10.1257/aer.20180478,A Price Theory of Multi-Sided Platforms: Reply,AER,2018,9,2018,478,1,7,Published before 2019,FALSE
 10.1257/app.20150310,The Causal Effect of Competition on Prices and Quality: Evidence from a Field Experiment,AEJ:Applied Economics,2019,1,2015,310,2,44,Published 2019 and later,TRUE
 10.1257/app.20160262,Property Rights and Gender Bias: Evidence from Land Reform in West Bengal,AEJ:Applied Economics,2019,4,2016,262,3,32,Published 2019 and later,TRUE
 10.1257/app.20160350,Externalities and Taxation of Supplemental Insurance: A Study of Medicare and Medigap,AEJ:Applied Economics,2019,4,2016,350,3,32,Published 2019 and later,TRUE
@@ -640,7 +630,6 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/pol.20180279,Student Loan Nudges: Experimental Evidence on Borrowing and Educational Attainment,AEJ:Economic Policy,2019,5,2018,279,2,12,Published 2019 and later,TRUE
 10.1257/pol.20180374,Long-Term Orientation and Educational Performance,AEJ:Economic Policy,2019,11,2018,374,2,18,Published 2019 and later,TRUE
 10.1257/pol.20180510,Reducing Inequality through Dynamic Complementarity: Evidence from Head Start and Public School Spending,AEJ:Economic Policy,2019,11,2018,510,3,15,Published 2019 and later,TRUE
-10.1257/pol.20180543,New Evidence on Information Disclosure through Restaurant Hygiene Grading: Reply,AEJ:Economic Policy,2019,11,2018,543,3,15,Published 2019 and later,TRUE
 10.1257/mac.20140286,Asset Bubbles and Global Imbalances,AEJ:Macro,2019,7,2014,286,4,56,Published 2019 and later,TRUE
 10.1257/mac.20150055,"Internal Geography, Labor Mobility, and the Distributional Impacts of Trade",AEJ:Macro,2019,7,2015,55,1,53,Published 2019 and later,TRUE
 10.1257/mac.20150191,Corporate Cash and Employment,AEJ:Macro,2019,7,2015,191,2,50,Published 2019 and later,TRUE
@@ -730,7 +719,7 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20151231,"Disability Benefits, Consumption Insurance, and Household Labor Supply",AER,2019,7,2015,1231,3,47,Published 2019 and later,TRUE
 10.1257/aer.20151310,Contractual Managerial Incentives with Stock Price Feedback,AER,2019,7,2015,1310,3,47,Published 2019 and later,TRUE
 10.1257/aer.20151317,Large Firm Dynamics and the Business Cycle,AER,2019,4,2015,1317,3,44,Published 2019 and later,TRUE
-10.1257/aer.20151398,How Do Patents Affect Follow-On Innovation? Evidence from the Human Genome,AER,2019,1,2015,1398,4,38,Published 2019 and later,TRUE
+10.1257/aer.20151398,How Do Patents Affect Follow-On Innovation? Evidence from the Human Genome,AER,2019,1,2015,1398,3,41,Published 2019 and later,TRUE
 10.1257/aer.20151422,Beyond Truth-Telling: Preference Estimation with Centralized School Choice and College Admissions,AER,2019,4,2015,1422,4,41,Published 2019 and later,TRUE
 10.1257/aer.20151569,Structural Interpretation of Vector Autoregressions with Incomplete Identification: Revisiting the Role of Oil Supply and Demand Shocks,AER,2019,5,2015,1569,4,42,Published 2019 and later,TRUE
 10.1257/aer.20151684,Wealth Distribution and Social Mobility in the US: A Quantitative Approach,AER,2019,5,2015,1684,4,42,Published 2019 and later,TRUE
@@ -741,7 +730,7 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20160328,"Bargaining over Babies: Theory, Evidence, and Policy Implications",AER,2019,9,2016,328,1,43,Published 2019 and later,TRUE
 10.1257/aer.20160346,"Drilling Like There’s No Tomorrow: Bankruptcy, Insurance, and Environmental Risk",AER,2019,2,2016,346,1,36,Published 2019 and later,TRUE
 10.1257/aer.20160404,Differentiated Durable Goods Monopoly: A Robust Coase Conjecture,AER,2019,5,2016,404,1,39,Published 2019 and later,FALSE
-10.1257/aer.20160409,Does Incomplete Spanning in International Financial Markets Help to Explain Exchange Rates?,AER,2019,6,2016,409,1,40,Published 2019 and later,TRUE
+10.1257/aer.20160409,Does Incomplete Spanning in International Financial Markets Help to Explain Exchange Rates?,AER,2019,6,2016,409,2,37,Published 2019 and later,TRUE
 10.1257/aer.20160576,Walk on the Wild Side: Temporarily Unstable Paths and Multiplicative Sunspots,AER,2019,5,2016,576,2,36,Published 2019 and later,TRUE
 10.1257/aer.20160600,The Taxing Deed of Globalization,AER,2019,2,2016,600,2,33,Published 2019 and later,TRUE
 10.1257/aer.20160658,Consumers as Tax Auditors,AER,2019,9,2016,658,2,40,Published 2019 and later,TRUE
@@ -762,7 +751,6 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20161720,"Frictions in a Competitive, Regulated Market: Evidence from Taxis",AER,2019,8,2016,1720,4,33,Published 2019 and later,TRUE
 10.1257/aer.20161923,Vulnerable Growth,AER,2019,4,2016,1923,4,29,Published 2019 and later,TRUE
 10.1257/aer.20161925,Occupations and Import Competition: Evidence from Denmark,AER,2019,12,2016,1925,4,37,Published 2019 and later,TRUE
-10.1257/aer.20162011,The Dynamic Effects of Personal and Corporate Income Tax Changes in the United States: Comment,AER,2019,7,2016,2011,4,32,Published 2019 and later,TRUE
 10.1257/aer.20170007,Beliefs about Gender,AER,2019,3,2017,7,1,25,Published 2019 and later,TRUE
 10.1257/aer.20170110,Are Low Interest Rates Deflationary? A Paradox of Perfect-Foresight Analysis,AER,2019,1,2017,110,1,23,Published 2019 and later,FALSE
 10.1257/aer.20170116,Learning to Coordinate: A Study in Retail Gasoline,AER,2019,2,2017,116,1,24,Published 2019 and later,TRUE
@@ -783,11 +771,10 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20170995,Financing Durable Assets,AER,2019,2,2017,995,2,21,Published 2019 and later,FALSE
 10.1257/aer.20171000,Optimal Dynamic Allocation of Attention,AER,2019,8,2017,1000,2,27,Published 2019 and later,FALSE
 10.1257/aer.20171019,Elite Colleges and Upward Mobility to Top Jobs and Top Incomes,AER,2019,1,2017,1019,2,20,Published 2019 and later,TRUE
-10.1257/aer.20171066,Optimal Trend Inflation,AER,2019,2,2017,1066,2,21,Published 2019 and later,TRUE
+10.1257/aer.20171066,Optimal Trend Inflation,AER,2019,2,2017,1066,3,18,Published 2019 and later,TRUE
 10.1257/aer.20171112,Disrupting Education? Experimental Evidence on Technology-Aided Instruction in India,AER,2019,4,2017,1112,3,20,Published 2019 and later,TRUE
 10.1257/aer.20171172,Parents’ Beliefs about Their Children’s Academic Ability: Implications for Educational Investments,AER,2019,8,2017,1172,3,24,Published 2019 and later,TRUE
 10.1257/aer.20171288,Equilibrium Provider Networks: Bargaining and Exclusion in Health Care Markets,AER,2019,2,2017,1288,3,18,Published 2019 and later,TRUE
-10.1257/aer.20171338,"The Cyclicality of Sales, Regular and Effective Prices: Business Cycle and Policy Implications: Reply",AER,2019,1,2017,1338,3,17,Published 2019 and later,TRUE
 10.1257/aer.20171400,"Monetary Policy, Bounded Rationality, and Incomplete Markets",AER,2019,11,2017,1400,3,27,Published 2019 and later,TRUE
 10.1257/aer.20171438,"(Mis)Allocation, Market Power, and Global Oil Extraction",AER,2019,4,2017,1438,3,20,Published 2019 and later,TRUE
 10.1257/aer.20171445,Who Pays for the Minimum Wage?,AER,2019,8,2017,1445,3,24,Published 2019 and later,TRUE
@@ -799,7 +786,6 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20171745,Missing Growth from Creative Destruction,AER,2019,8,2017,1745,4,21,Published 2019 and later,TRUE
 10.1257/aer.20171764,Failures in Contingent Reasoning: The Role of Uncertainty,AER,2019,10,2017,1764,4,23,Published 2019 and later,TRUE
 10.1257/aer.20171765,The Impact of Media Censorship: 1984 or Brave New World?,AER,2019,6,2017,1765,4,19,Published 2019 and later,TRUE
-10.1257/aer.20171787,The Human Capital Stock: A Generalized Approach: Comment,AER,2019,3,2017,1787,4,16,Published 2019 and later,TRUE
 10.1257/aer.20171829,The Dynamics of Discrimination: Theory and Evidence,AER,2019,10,2017,1829,4,23,Published 2019 and later,TRUE
 10.1257/aer.20171840,Equilibrium Effects of Firm Subsidies,AER,2019,10,2017,1840,4,23,Published 2019 and later,TRUE
 10.1257/aer.20171919,Research and the Approval Process: The Organization of Persuasion,AER,2019,3,2017,1919,4,16,Published 2019 and later,FALSE
@@ -814,7 +800,6 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20180086,The Effect of House Prices on Household Borrowing: A New Approach,AER,2019,6,2018,86,1,16,Published 2019 and later,TRUE
 10.1257/aer.20180098,The Term Structure of Currency Carry Trade Risk Premia,AER,2019,12,2018,98,1,22,Published 2019 and later,TRUE
 10.1257/aer.20180131,How Efficient Is Dynamic Competition? The Case of Price as Investment,AER,2019,9,2018,131,1,19,Published 2019 and later,TRUE
-10.1257/aer.20180145,Monetary Policy and Rational Asset Price Bubbles: Comment,AER,2019,5,2018,145,1,15,Published 2019 and later,FALSE
 10.1257/aer.20180174,Unity in Diversity? How Intergroup Contact Can Foster Nation Building,AER,2019,11,2018,174,1,21,Published 2019 and later,TRUE
 10.1257/aer.20180277,Making Moves Matter: Experimental Evidence on Incentivizing Bureaucrats through Performance-Based Postings,AER,2019,1,2018,277,1,11,Published 2019 and later,TRUE
 10.1257/aer.20180279,The Mortality and Medical Costs of Air Pollution: Evidence from Changes in Wind Direction,AER,2019,12,2018,279,1,22,Published 2019 and later,TRUE
@@ -830,7 +815,6 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20180609,Pre-Event Trends in the Panel Event-Study Design,AER,2019,9,2018,609,2,16,Published 2019 and later,TRUE
 10.1257/aer.20180654,Predicting and Understanding Initial Play,AER,2019,12,2018,654,2,19,Published 2019 and later,TRUE
 10.1257/aer.20180688,Deliberately Stochastic,AER,2019,7,2018,688,2,14,Published 2019 and later,FALSE
-10.1257/aer.20180707,The Dynamic Effects of Personal and Corporate Income Tax Changes in the United States: Reply,AER,2019,7,2018,707,2,14,Published 2019 and later,TRUE
 10.1257/aer.20180771,Market Failure in Kidney Exchange,AER,2019,11,2018,771,2,18,Published 2019 and later,TRUE
 10.1257/aer.20180773,Revenue Guarantee Equivalence,AER,2019,5,2018,773,2,12,Published 2019 and later,FALSE
 10.1257/aer.20180998,Liquidity Sentiments,AER,2019,11,2018,998,3,15,Published 2019 and later,FALSE
@@ -838,7 +822,6 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20181289,"The Effects of Rent Control Expansion on Tenants, Landlords, and Inequality: Evidence from San Francisco",AER,2019,9,2018,1289,3,13,Published 2019 and later,TRUE
 10.1257/aer.20181446,Does Diversity Matter for Health? Experimental Evidence from Oakland,AER,2019,12,2018,1446,3,16,Published 2019 and later,TRUE
 10.1257/aer.20181480,Strategy Choice in the Infinitely Repeated Prisoner’s Dilemma,AER,2019,11,2018,1480,4,12,Published 2019 and later,TRUE
-10.1257/aer.20181678,The Human Capital Stock: A Generalized Approach: Reply,AER,2019,3,2018,1678,4,4,Published 2019 and later,FALSE
 10.1257/aer.20181714,Incentivized Resume Rating: Eliciting Employer Preferences without Deception,AER,2019,11,2018,1714,4,12,Published 2019 and later,TRUE
 10.1257/aer.20181897,Quantifying Information and Uncertainty,AER,2019,10,2018,1897,4,11,Published 2019 and later,FALSE
 10.1257/aeri.20180010,When Work Disappears: Manufacturing Decline and the Falling Marriage Market Value of Young Men,AER:Insights,2019,9,2018,10,1,19,Published 2019 and later,TRUE
@@ -944,7 +927,7 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/pol.20180327,"The Buck Stops Where? Federalism, Uncertainty, and Investment in the Brazilian Water and Sanitation Sector",AEJ:Economic Policy,2020,8,2018,327,2,27,Published 2019 and later,TRUE
 10.1257/pol.20180352,Do Human Capital Decisions Respond to the Returns to Education? Evidence from DACA,AEJ:Economic Policy,2020,2,2018,352,2,21,Published 2019 and later,TRUE
 10.1257/pol.20180410,Taxing Hidden Wealth: The Consequences of US Enforcement Initiatives on Evasive Foreign Accounts,AEJ:Economic Policy,2020,8,2018,410,2,27,Published 2019 and later,FALSE
-10.1257/pol.20180420,Reported MPC and Unobserved Heterogeneity,AEJ:Economic Policy,2020,11,2018,420,2,30,Published 2019 and later,TRUE
+10.1257/pol.20180420,Reported MPC and Unobserved Heterogeneity,AEJ:Economic Policy,2020,11,2018,420,3,27,Published 2019 and later,TRUE
 10.1257/pol.20180559,Peer Effects in Residential Water Conservation: Evidence from Migration,AEJ:Economic Policy,2020,8,2018,559,3,24,Published 2019 and later,TRUE
 10.1257/pol.20180592,Where Does Multinational Investment Go with Territorial Taxation? Evidence from the United Kingdom,AEJ:Economic Policy,2020,2,2018,592,3,18,Published 2019 and later,TRUE
 10.1257/pol.20180605,An Equilibrium Theory of Retirement Plan Design,AEJ:Economic Policy,2020,5,2018,605,3,21,Published 2019 and later,TRUE
@@ -1053,7 +1036,7 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20170772,"Mortgage Debt, Consumption, and Illiquid Housing Markets in the Great Recession",AER,2020,6,2017,772,2,37,Published 2019 and later,TRUE
 10.1257/aer.20170861,Using Aggregated Relational Data to Feasibly Identify Network Structure without Network Data,AER,2020,8,2017,861,2,39,Published 2019 and later,TRUE
 10.1257/aer.20170950,Incentivized Kidney Exchange,AER,2020,7,2017,950,2,38,Published 2019 and later,TRUE
-10.1257/aer.20171034,Diffusing Coordination Risk,AER,2020,1,2017,1034,2,32,Published 2019 and later,FALSE
+10.1257/aer.20171034,Diffusing Coordination Risk,AER,2020,1,2017,1034,3,29,Published 2019 and later,FALSE
 10.1257/aer.20171175,From Extreme to Mainstream: The Erosion of Social Norms,AER,2020,11,2017,1175,3,39,Published 2019 and later,TRUE
 10.1257/aer.20171201,Dominant Currency Paradigm,AER,2020,3,2017,1201,3,31,Published 2019 and later,TRUE
 10.1257/aer.20171349,Long-Run Growth of Financial Data Technology,AER,2020,8,2017,1349,3,36,Published 2019 and later,TRUE
@@ -1074,7 +1057,7 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20180338,Are Ideas Getting Harder to Find?,AER,2020,4,2018,338,1,26,Published 2019 and later,TRUE
 10.1257/aer.20180384,Why Special Economic Zones? Using Trade Policy to Discriminate across Importers,AER,2020,5,2018,384,1,27,Published 2019 and later,TRUE
 10.1257/aer.20180427,"Relational Contracting, Negotiation, and External Enforcement",AER,2020,7,2018,427,1,29,Published 2019 and later,FALSE
-10.1257/aer.20180501,Regulation by Shaming: Deterrence Effects of Publicizing Violations of Workplace Safety and Health Laws,AER,2020,6,2018,501,2,25,Published 2019 and later,TRUE
+10.1257/aer.20180501,Regulation by Shaming: Deterrence Effects of Publicizing Violations of Workplace Safety and Health Laws,AER,2020,6,2018,501,1,28,Published 2019 and later,TRUE
 10.1257/aer.20180511,"Maternal Depression, Women’s Empowerment, and Parental Investment: Evidence from a Randomized Controlled Trial",AER,2020,3,2018,511,2,22,Published 2019 and later,TRUE
 10.1257/aer.20180601,Diffusion Games,AER,2020,1,2018,601,2,20,Published 2019 and later,FALSE
 10.1257/aer.20180607,"Seasonal Liquidity, Rural Labor Markets, and Agricultural Production",AER,2020,11,2018,607,2,30,Published 2019 and later,TRUE
@@ -1083,15 +1066,13 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20180652,Sources of Displaced Workers’ Long-Term Earnings Losses,AER,2020,10,2018,652,2,29,Published 2019 and later,TRUE
 10.1257/aer.20180728,The Dynamics of Motivated Beliefs,AER,2020,2,2018,728,2,21,Published 2019 and later,TRUE
 10.1257/aer.20180805,Building Nations through Shared Experiences: Evidence from African Football,AER,2020,5,2018,805,2,24,Published 2019 and later,TRUE
-10.1257/aer.20180812,Detecting Potential Overbilling in Medicare Reimbursement via Hours Worked: Comment,AER,2020,12,2018,812,2,31,Published 2019 and later,TRUE
 10.1257/aer.20180830,"Financial Crises, Dollarization, and Lending of Last Resort in Open Economies",AER,2020,8,2018,830,2,27,Published 2019 and later,FALSE
 10.1257/aer.20180831,Self-Fulfilling Debt Dilution: Maturity and Multiplicity in Debt Models,AER,2020,9,2018,831,2,28,Published 2019 and later,FALSE
 10.1257/aer.20180841,Social Ties and the Selection of China’s Political Elite,AER,2020,6,2018,841,2,25,Published 2019 and later,TRUE
 10.1257/aer.20180865,Sources of Inaction in Household Finance: Evidence from the Danish Mortgage Market,AER,2020,10,2018,865,2,29,Published 2019 and later,TRUE
-10.1257/aer.20180888,Geographic Dispersion of Economic Shocks: Evidence from the Fracking Revolution: Comment,AER,2020,6,2018,888,2,25,Published 2019 and later,TRUE
 10.1257/aer.20180924,Upping the Ante: The Equilibrium Effects of Unconditional Grants to Private Schools,AER,2020,10,2018,924,2,29,Published 2019 and later,TRUE
-10.1257/aer.20180946,"Regulating Innovation with Uncertain Quality: Information, Risk, and Access in Medical Devices",AER,2020,1,2018,946,3,17,Published 2019 and later,TRUE
-10.1257/aer.20180975,Misperceived Social Norms: Women Working Outside the Home in Saudi Arabia,AER,2020,10,2018,975,3,26,Published 2019 and later,TRUE
+10.1257/aer.20180946,"Regulating Innovation with Uncertain Quality: Information, Risk, and Access in Medical Devices",AER,2020,1,2018,946,2,20,Published 2019 and later,TRUE
+10.1257/aer.20180975,Misperceived Social Norms: Women Working Outside the Home in Saudi Arabia,AER,2020,10,2018,975,2,29,Published 2019 and later,TRUE
 10.1257/aer.20180976,Way Down in the Hole: Adaptation to Long-Term Water Loss in Rural India,AER,2020,1,2018,976,3,17,Published 2019 and later,TRUE
 10.1257/aer.20181012,Escalation of Scrutiny: The Gains from Dynamic Enforcement of Environmental Regulations,AER,2020,8,2018,1012,3,24,Published 2019 and later,FALSE
 10.1257/aer.20181026,Does When You Die Depend on Where You Live? Evidence from Hurricane Katrina,AER,2020,11,2018,1026,3,27,Published 2019 and later,TRUE
@@ -1118,10 +1099,8 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20181721,Policy Language and Information Effects in the Early Days of Federal Reserve Forward Guidance,AER,2020,9,2018,1721,4,22,Published 2019 and later,TRUE
 10.1257/aer.20181798,Acquiring Information through Peers,AER,2020,7,2018,1798,4,20,Published 2019 and later,FALSE
 10.1257/aer.20190080,Learning under Diverse World Views: Model-Based Inference,AER,2020,5,2019,80,1,15,Published 2019 and later,FALSE
-10.1257/aer.20190089,Steering the Climate System: Using Inertia to Lower the Cost of Policy: Comment,AER,2020,4,2019,89,1,14,Published 2019 and later,FALSE
 10.1257/aer.20190234,Raising Capital from Heterogeneous Investors,AER,2020,3,2019,234,1,13,Published 2019 and later,FALSE
 10.1257/aer.20190283,A Model of Complex Contracts,AER,2020,5,2019,283,1,15,Published 2019 and later,FALSE
-10.1257/aer.20190448,Geographic Dispersion of Economic Shocks: Evidence from the Fracking Revolution: Reply,AER,2020,6,2019,448,1,16,Published 2019 and later,FALSE
 10.1257/aer.20190460,Discounts and Deadlines in Consumer Search,AER,2020,12,2019,460,1,22,Published 2019 and later,TRUE
 10.1257/aer.20190611,The Production Relocation and Price Effects of US Trade Policy: The Case of Washing Machines,AER,2020,7,2019,611,2,14,Published 2019 and later,TRUE
 10.1257/aer.20190623,"Artificial Intelligence, Algorithmic Pricing, and Collusion",AER,2020,10,2019,623,2,17,Published 2019 and later,TRUE
@@ -1137,10 +1116,8 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20191099,A Model of Competing Narratives,AER,2020,12,2019,1099,3,16,Published 2019 and later,FALSE
 10.1257/aer.20191191,Screening and Selection: The Case of Mammograms,AER,2020,12,2019,1191,3,16,Published 2019 and later,TRUE
 10.1257/aer.20191330,Nonrivalry and the Economics of Data,AER,2020,9,2019,1330,3,13,Published 2019 and later,TRUE
-10.1257/aer.20191414,Arrival of Young Talent: The Send-Down Movement and Rural Education in China,AER,2020,11,2019,1414,3,15,Published 2019 and later,TRUE
+10.1257/aer.20191414,Arrival of Young Talent: The Send-Down Movement and Rural Education in China,AER,2020,11,2019,1414,4,12,Published 2019 and later,TRUE
 10.1257/aer.20191717,What Makes a Rule Complex?,AER,2020,12,2019,1717,4,13,Published 2019 and later,TRUE
-10.1257/aer.20191814,Steering the Climate System: Using Inertia to Lower the Cost of Policy: Reply,AER,2020,4,2019,1814,4,5,Published 2019 and later,FALSE
-10.1257/aer.20191970,Detecting Potential Overbilling in Medicare Reimbursement via Hours Worked: Reply,AER,2020,12,2019,1970,4,13,Published 2019 and later,TRUE
 10.1257/aer.20200068,A Few Bad Apples Spoil the Barrel: An Anti-Folk Theorem for Anonymous Repeated Games with Incomplete Information,AER,2020,12,2020,68,1,10,Published 2019 and later,FALSE
 10.1257/aeri.20180150,Monopsony in Online Labor Markets,AER:Insights,2020,3,2018,150,1,25,Published 2019 and later,TRUE
 10.1257/aeri.20180396,Trade Liberalization and Mortality: Evidence from US Counties,AER:Insights,2020,3,2018,396,3,19,Published 2019 and later,TRUE
@@ -1222,7 +1199,7 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/pol.20170634,Thy Neighbor’s Misfortune: Peer Effect on Consumption,AEJ:Economic Policy,2021,5,2017,634,4,42,Published 2019 and later,TRUE
 10.1257/pol.20170708,Unit Sales and Price Effects of Preannounced Consumption Tax Reforms: Micro-level Evidence from European VAT,AEJ:Economic Policy,2021,8,2017,708,4,45,Published 2019 and later,TRUE
 10.1257/pol.20180072,Informal Labor and the Efficiency Cost of Social Programs: Evidence from Unemployment Insurance in Brazil,AEJ:Economic Policy,2021,8,2018,72,1,42,Published 2019 and later,TRUE
-10.1257/pol.20180218,Retail Prices in a City,AEJ:Economic Policy,2021,5,2018,218,1,39,Published 2019 and later,TRUE
+10.1257/pol.20180218,Retail Prices in a City,AEJ:Economic Policy,2021,5,2018,218,2,36,Published 2019 and later,TRUE
 10.1257/pol.20180294,Fiscal Transfers in the Spatial Economy,AEJ:Economic Policy,2021,11,2018,294,2,42,Published 2019 and later,TRUE
 10.1257/pol.20180401,"Parental Support, Savings, and Student Loan Repayment",AEJ:Economic Policy,2021,2,2018,401,2,33,Published 2019 and later,TRUE
 10.1257/pol.20180406,The Costs of Corporate Tax Complexity,AEJ:Economic Policy,2021,5,2018,406,2,36,Published 2019 and later,TRUE
@@ -1381,7 +1358,7 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20170768,Daily Labor Supply and Adaptive Reference Points,AER,2021,8,2017,768,2,51,Published 2019 and later,TRUE
 10.1257/aer.20171272,Parental Resources and College Attendance: Evidence from Lottery Wins,AER,2021,4,2017,1272,3,44,Published 2019 and later,TRUE
 10.1257/aer.20171611,Speculative Fever: Investor Contagion in the Housing Bubble,AER,2021,2,2017,1611,3,42,Published 2019 and later,FALSE
-10.1257/aer.20171671,"The Long-Run Effects of Childhood Insurance Coverage: Medicaid Implementation, Adult Health, and Labor Market Outcomes",AER,2021,8,2017,1671,3,48,Published 2019 and later,TRUE
+10.1257/aer.20171671,"The Long-Run Effects of Childhood Insurance Coverage: Medicaid Implementation, Adult Health, and Labor Market Outcomes",AER,2021,8,2017,1671,4,45,Published 2019 and later,TRUE
 10.1257/aer.20171742,Knowledge Spillovers and Corporate Investment in Scientific Research,AER,2021,3,2017,1742,4,40,Published 2019 and later,TRUE
 10.1257/aer.20171825,Impacts of Performance Pay for Hospitals: The Readmissions Reduction Program,AER,2021,4,2017,1825,4,41,Published 2019 and later,TRUE
 10.1257/aer.20180284,The Legacy of Colonial Medicine in Central Africa,AER,2021,4,2018,284,1,38,Published 2019 and later,FALSE
@@ -1465,7 +1442,6 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20200513,"Media, Pulpit, and Populist Persuasion: Evidence from Father Coughlin",AER,2021,9,2020,513,1,19,Published 2019 and later,TRUE
 10.1257/aer.20200523,The Challenges of Universal Health Insurance in Developing Countries: Experimental Evidence from Indonesia’s National Health Insurance,AER,2021,9,2020,523,1,19,Published 2019 and later,TRUE
 10.1257/aer.20200555,Rank Uncertainty in Organizations,AER,2021,3,2020,555,1,13,Published 2019 and later,FALSE
-10.1257/aer.20200679,When Does Regulation Distort Costs? Lessons from Fuel Procurement in US Electricity Generation: Comment,AER,2021,4,2020,679,2,11,Published 2019 and later,TRUE
 10.1257/aer.20200705,On Her Own Account: How Strengthening Women’s Financial Control Impacts Labor Supply and Gender Norms,AER,2021,7,2020,705,2,14,Published 2019 and later,TRUE
 10.1257/aer.20200829,Market Fragmentation,AER,2021,7,2020,829,2,14,Published 2019 and later,FALSE
 10.1257/aer.20200988,Projection of Private Values in Auctions,AER,2021,10,2020,988,2,17,Published 2019 and later,FALSE
@@ -1479,7 +1455,6 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20201692,Justified Communication Equilibrium,AER,2021,9,2020,1692,4,10,Published 2019 and later,FALSE
 10.1257/aer.20201769,Constrained Pseudo-Market Equilibrium,AER,2021,11,2020,1769,4,12,Published 2019 and later,FALSE
 10.1257/aer.20201817,Delegation in Veto Bargaining,AER,2021,12,2020,1817,4,13,Published 2019 and later,FALSE
-10.1257/aer.20201872,When Does Regulation Distort Costs? Lessons from Fuel Procurement in US Electricity Generation: Reply,AER,2021,4,2020,1872,4,5,Published 2019 and later,FALSE
 10.1257/aer.20201877,Labor Supply Responses to Learning the Tax and Benefit Schedule,AER,2021,11,2020,1877,4,12,Published 2019 and later,TRUE
 10.1257/aeri.20190382,Connecting the Countryside via E-Commerce: Evidence from China,AER:Insights,2021,3,2019,382,3,19,Published 2019 and later,TRUE
 10.1257/aeri.20190499,Measuring Technological Innovation over the Long Run,AER:Insights,2021,9,2019,499,4,22,Published 2019 and later,TRUE
@@ -1534,15 +1509,13 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/app.20190489,Lifetime Earnings in the United States over Six Decades,AEJ:Applied Economics,2022,10,2019,489,3,38,Published 2019 and later,TRUE
 10.1257/app.20190549,Historical Lynchings and the Contemporary Voting Behavior of Blacks,AEJ:Applied Economics,2022,7,2019,549,3,35,Published 2019 and later,TRUE
 10.1257/app.20190568,Rational Habit Formation: Experimental Evidence from Handwashing in India,AEJ:Applied Economics,2022,1,2019,568,3,29,Published 2019 and later,TRUE
-10.1257/app.20190589,"Information Frictions, Internet, and the Relationship between Distance and Trade",AEJ:Applied Economics,2022,1,2019,589,3,29,Published 2019 and later,TRUE
+10.1257/app.20190589,"Information Frictions, Internet, and the Relationship between Distance and Trade",AEJ:Applied Economics,2022,1,2019,589,4,26,Published 2019 and later,TRUE
 10.1257/app.20190629,Do Doctors Improve the Health Care of Their Parents? Evidence from Admission Lotteries,AEJ:Applied Economics,2022,7,2019,629,4,32,Published 2019 and later,TRUE
-10.1257/app.20190711,Reexamining the Contribution of Public Health Efforts to the Decline in Urban Mortality: Comment,AEJ:Applied Economics,2022,4,2019,711,4,29,Published 2019 and later,FALSE
 10.1257/app.20190721,The Round Trip Effect: Endogenous Transport Costs and International Trade,AEJ:Applied Economics,2022,10,2019,721,4,35,Published 2019 and later,TRUE
 10.1257/app.20190722,Does Patient Demand Contribute to the Overuse of Prescription Drugs?,AEJ:Applied Economics,2022,1,2019,722,4,26,Published 2019 and later,TRUE
 10.1257/app.20190772,The Origins of Common Identity: Evidence from Alsace-Lorraine,AEJ:Applied Economics,2022,1,2019,772,4,26,Published 2019 and later,TRUE
 10.1257/app.20190782,Labor Market Returns to Vocational Secondary Education,AEJ:Applied Economics,2022,1,2019,782,4,26,Published 2019 and later,TRUE
 10.1257/app.20200025,LinkedIn(to) Job Opportunities: Experimental Evidence from Job Readiness Training,AEJ:Applied Economics,2022,4,2020,25,1,26,Published 2019 and later,TRUE
-10.1257/app.20200118,"Comment on “Temperature and Decisions: Evidence from 207,000 Court Cases”",AEJ:Applied Economics,2022,10,2020,118,1,32,Published 2019 and later,FALSE
 10.1257/app.20200128,Political Fragmentation and Government Stability: Evidence from Local Governments in Spain,AEJ:Applied Economics,2022,4,2020,128,1,26,Published 2019 and later,TRUE
 10.1257/app.20200135,Health Insurance Design Meets Saving Incentives: Consumer Responses to Complex Contracts,AEJ:Applied Economics,2022,4,2020,135,1,26,Published 2019 and later,TRUE
 10.1257/app.20200164,Emotions and Risk Attitudes,AEJ:Applied Economics,2022,7,2020,164,1,29,Published 2019 and later,TRUE
@@ -1550,7 +1523,7 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/app.20200210,Inversions in US Presidential Elections: 1836–2016,AEJ:Applied Economics,2022,1,2020,210,1,23,Published 2019 and later,TRUE
 10.1257/app.20200220,"Missing Women, Integration Costs, and Big Push Policies in the Saudi Labor Market",AEJ:Applied Economics,2022,4,2020,220,1,26,Published 2019 and later,TRUE
 10.1257/app.20200296,Money and Politics: The Effects of Campaign Spending Limits on Political Entry and Competition,AEJ:Applied Economics,2022,10,2020,296,1,32,Published 2019 and later,TRUE
-10.1257/app.20200306,Using Individual-Level Randomized Treatment to Learn about Market Structure,AEJ:Applied Economics,2022,10,2020,306,2,29,Published 2019 and later,FALSE
+10.1257/app.20200306,Using Individual-Level Randomized Treatment to Learn about Market Structure,AEJ:Applied Economics,2022,10,2020,306,1,32,Published 2019 and later,FALSE
 10.1257/app.20200360,Neighbors' Effects on University Enrollment,AEJ:Applied Economics,2022,7,2020,360,2,26,Published 2019 and later,TRUE
 10.1257/app.20200367,Peer Effects in Product Adoption,AEJ:Applied Economics,2022,7,2020,367,2,26,Published 2019 and later,FALSE
 10.1257/app.20200397,"Capital Destruction and Economic Growth: The Effects of Sherman’s March, 1850–1920",AEJ:Applied Economics,2022,10,2020,397,2,29,Published 2019 and later,TRUE
@@ -1570,7 +1543,6 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/app.20210151,And Yet It Moves: Intergenerational Mobility in Italy,AEJ:Applied Economics,2022,7,2021,151,1,17,Published 2019 and later,TRUE
 10.1257/app.20210176,The Impact of Presidential Appointment of Judges: Montesquieu or the Federalists?,AEJ:Applied Economics,2022,10,2021,176,1,20,Published 2019 and later,TRUE
 10.1257/app.20210184,Is Zero a Special Price? Evidence from Child Health Care,AEJ:Applied Economics,2022,10,2021,184,2,17,Published 2019 and later,TRUE
-10.1257/app.20210230,Reexamining the Contribution of Public Health Efforts to the Decline in Urban Mortality: Reply,AEJ:Applied Economics,2022,4,2021,230,2,11,Published 2019 and later,TRUE
 10.1257/pol.20150252,Housing Lock: Dutch Evidence on the Impact of Negative Home Equity on Household Mobility,AEJ:Economic Policy,2022,8,2015,252,2,87,Published 2019 and later,TRUE
 10.1257/pol.20180144,Childhood Housing and Adult Outcomes: A Between-Siblings Analysis of Housing Vouchers and Public Housing,AEJ:Economic Policy,2022,8,2018,144,1,54,Published 2019 and later,TRUE
 10.1257/pol.20180229,The Effects of Mortgage Credit Availability: Evidence from Minimum Credit Score Lending Rules,AEJ:Economic Policy,2022,2,2018,229,2,45,Published 2019 and later,TRUE
@@ -1611,7 +1583,7 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/pol.20200203,Multinationals’ Sales and Profit Shifting in Tax Havens,AEJ:Economic Policy,2022,11,2020,203,1,33,Published 2019 and later,TRUE
 10.1257/pol.20200226,School Spending and Student Outcomes: Evidence from Revenue Limit Elections in Wisconsin,AEJ:Economic Policy,2022,2,2020,226,1,24,Published 2019 and later,TRUE
 10.1257/pol.20200257,Improving Preferential Market Access through Rules of Origin: Firm-Level Evidence from Bangladesh,AEJ:Economic Policy,2022,2,2020,257,1,24,Published 2019 and later,TRUE
-10.1257/pol.20200258,Behavioral Responses to Wealth Taxes: Evidence from Switzerland,AEJ:Economic Policy,2022,11,2020,258,1,33,Published 2019 and later,TRUE
+10.1257/pol.20200258,Behavioral Responses to Wealth Taxes: Evidence from Switzerland,AEJ:Economic Policy,2022,11,2020,258,2,30,Published 2019 and later,TRUE
 10.1257/pol.20200272,Gini and Optimal Income Taxation by Rank,AEJ:Economic Policy,2022,8,2020,272,2,27,Published 2019 and later,TRUE
 10.1257/pol.20200289,The Long-Run Effects of R&amp;D Place-Based Policies: Evidence from Russian Science Cities,AEJ:Economic Policy,2022,8,2020,289,2,27,Published 2019 and later,TRUE
 10.1257/pol.20200290,Do Environmental Regulations Affect the Decision to Export?,AEJ:Economic Policy,2022,5,2020,290,2,24,Published 2019 and later,TRUE
@@ -1622,7 +1594,7 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/pol.20200426,Depreciating Licenses,AEJ:Economic Policy,2022,8,2020,426,2,27,Published 2019 and later,TRUE
 10.1257/pol.20200431,The Long-Run Effects of Sports Club Vouchers for Primary School Children,AEJ:Economic Policy,2022,8,2020,431,2,27,Published 2019 and later,FALSE
 10.1257/pol.20200443,How Do Households Value the Future? Evidence from Property Taxes,AEJ:Economic Policy,2022,2,2020,443,2,21,Published 2019 and later,TRUE
-10.1257/pol.20200466,The Old-Age Security Motive for Fertility: Evidence from the Extension of Social Pensions in Namibia,AEJ:Economic Policy,2022,11,2020,466,2,30,Published 2019 and later,TRUE
+10.1257/pol.20200466,The Old-Age Security Motive for Fertility: Evidence from the Extension of Social Pensions in Namibia,AEJ:Economic Policy,2022,11,2020,466,3,27,Published 2019 and later,TRUE
 10.1257/pol.20200515,Does Virtual Advising Increase College Enrollment? Evidence from a Random-Assignment College Access Field Experiment,AEJ:Economic Policy,2022,8,2020,515,3,24,Published 2019 and later,TRUE
 10.1257/pol.20200539,Mandatory Energy Efficiency Disclosure in Housing Markets,AEJ:Economic Policy,2022,11,2020,539,3,27,Published 2019 and later,TRUE
 10.1257/pol.20200543,The Electric Gini: Income Redistribution through Energy Prices,AEJ:Economic Policy,2022,5,2020,543,3,21,Published 2019 and later,TRUE
@@ -1630,7 +1602,6 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/pol.20200603,Can Nudges Increase Take-Up of the EITC? Evidence from Multiple Field Experiments,AEJ:Economic Policy,2022,11,2020,603,3,27,Published 2019 and later,TRUE
 10.1257/pol.20200678,The Valuation of Local School Quality under School Choice,AEJ:Economic Policy,2022,5,2020,678,3,21,Published 2019 and later,TRUE
 10.1257/pol.20200713,"Engaging Teachers with Technology Increased Achievement, Bypassing Teachers Did Not",AEJ:Economic Policy,2022,5,2020,713,4,18,Published 2019 and later,FALSE
-10.1257/pol.20200763,How Much Are Public School Teachers Willing to Pay for Their Retirement Benefits? Comment,AEJ:Economic Policy,2022,8,2020,763,4,21,Published 2019 and later,TRUE
 10.1257/pol.20200778,Adviser Value Added and Student Outcomes: Evidence from Randomly Assigned College Advisers,AEJ:Economic Policy,2022,11,2020,778,4,24,Published 2019 and later,TRUE
 10.1257/pol.20200805,Optimal Regulation of E-cigarettes: Theory and Evidence,AEJ:Economic Policy,2022,11,2020,805,4,24,Published 2019 and later,TRUE
 10.1257/pol.20210026,"Hungry for Success? SNAP Timing, High-Stakes Exam Performance, and College Attendance",AEJ:Economic Policy,2022,11,2021,26,1,21,Published 2019 and later,TRUE
@@ -1699,14 +1670,14 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/mic.20180386,Deduction Dilemmas: The Taiwan Assignment Mechanism,AEJ:Micro,2022,2,2018,386,4,39,Published 2019 and later,TRUE
 10.1257/mic.20190013,Stochastic Equilibria: Noise in Actions or Beliefs?,AEJ:Micro,2022,2,2019,13,1,36,Published 2019 and later,TRUE
 10.1257/mic.20190059,"Acquisition, Aggregation, and Sharing of Information in Sequential-Move Aggregative Games",AEJ:Micro,2022,8,2019,59,1,42,Published 2019 and later,FALSE
-10.1257/mic.20190085,Optimal Arrangements for Distribution in Developing Markets: Theory and Evidence,AEJ:Micro,2022,2,2019,85,1,36,Published 2019 and later,TRUE
+10.1257/mic.20190085,Optimal Arrangements for Distribution in Developing Markets: Theory and Evidence,AEJ:Micro,2022,2,2019,85,2,33,Published 2019 and later,TRUE
 10.1257/mic.20190089,Negotiations with Limited Specifiability,AEJ:Micro,2022,2,2019,89,2,33,Published 2019 and later,FALSE
 10.1257/mic.20190117,The Anticompetitive Effect of Minority Share Acquisitions: Evidence from the Introduction of National Leniency Programs,AEJ:Micro,2022,2,2019,117,2,33,Published 2019 and later,TRUE
 10.1257/mic.20190125,Paths to the Frontier,AEJ:Micro,2022,2,2019,125,2,33,Published 2019 and later,FALSE
 10.1257/mic.20190133,Which Findings Should Be Published?,AEJ:Micro,2022,2,2019,133,2,33,Published 2019 and later,FALSE
 10.1257/mic.20190153,On the Experimental Robustness of the Allais Paradox,AEJ:Micro,2022,2,2019,153,2,33,Published 2019 and later,TRUE
 10.1257/mic.20190166,Relationships on the Rocks: Contract Evolution in a Market for Ice,AEJ:Micro,2022,2,2019,166,2,33,Published 2019 and later,TRUE
-10.1257/mic.20190187,Regulating Product Communication,AEJ:Micro,2022,2,2019,187,2,33,Published 2019 and later,FALSE
+10.1257/mic.20190187,Regulating Product Communication,AEJ:Micro,2022,2,2019,187,3,30,Published 2019 and later,FALSE
 10.1257/mic.20190203,Learning in Relational Contracts,AEJ:Micro,2022,2,2019,203,3,30,Published 2019 and later,FALSE
 10.1257/mic.20190218,False Positives and Transparency,AEJ:Micro,2022,5,2019,218,3,33,Published 2019 and later,FALSE
 10.1257/mic.20190232,Production Clustering and Offshoring,AEJ:Micro,2022,8,2019,232,3,36,Published 2019 and later,TRUE
@@ -1721,7 +1692,6 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/mic.20190307,Platform Governance,AEJ:Micro,2022,8,2019,307,3,36,Published 2019 and later,FALSE
 10.1257/mic.20190333,Friend-Based Ranking,AEJ:Micro,2022,5,2019,333,4,30,Published 2019 and later,TRUE
 10.1257/mic.20190337,Optimal Nonlinear Pricing by a Dominant Firm under Competition,AEJ:Micro,2022,5,2019,337,4,30,Published 2019 and later,FALSE
-10.1257/mic.20190338,"Transforming Ordinal Riskless Utility into Cardinal Risky Utility: A Comment on Chung, Glimcher, and Tymula (2019)",AEJ:Micro,2022,5,2019,338,4,30,Published 2019 and later,FALSE
 10.1257/mic.20190339,A Theory of Crime and Vigilance,AEJ:Micro,2022,8,2019,339,4,33,Published 2019 and later,FALSE
 10.1257/mic.20190344,Intermediation and Steering: Competition in Prices and Commissions,AEJ:Micro,2022,5,2019,344,4,30,Published 2019 and later,TRUE
 10.1257/mic.20190367,"Heterogeneous Impacts of Cost Shocks, Strategic Bidding, and Pass-Through: Evidence from the New England Electricity Market",AEJ:Micro,2022,5,2019,367,4,30,Published 2019 and later,TRUE
@@ -1791,7 +1761,7 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20190285,"Offshore Profit Shifting and Aggregate Measurement: Balance of Payments, Foreign Investment, Productivity, and the Labor Share",AER,2022,6,2019,285,1,40,Published 2019 and later,TRUE
 10.1257/aer.20190433,Measuring the Welfare Effects of Shame and Pride,AER,2022,1,2019,433,1,35,Published 2019 and later,TRUE
 10.1257/aer.20190486,Dispersed Behavior and Perceptions in Assortative Societies,AER,2022,9,2019,486,1,43,Published 2019 and later,FALSE
-10.1257/aer.20190565,Vulnerability and Clientelism,AER,2022,11,2019,565,2,42,Published 2019 and later,TRUE
+10.1257/aer.20190565,Vulnerability and Clientelism,AER,2022,11,2019,565,1,45,Published 2019 and later,TRUE
 10.1257/aer.20190668,Persistent Overconfidence and Biased Memory: Evidence from Managers,AER,2022,10,2019,668,2,41,Published 2019 and later,TRUE
 10.1257/aer.20190790,"Imperfect Competition, Compensating Differentials, and Rent Sharing in the US Labor Market",AER,2022,1,2019,790,2,32,Published 2019 and later,TRUE
 10.1257/aer.20190896,Using the Retail Distribution of Sellers to Impute Expenditure Shares,AER,2022,7,2019,896,3,35,Published 2019 and later,TRUE
@@ -1842,7 +1812,7 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20201550,When Choices Are Mistakes,AER,2022,7,2020,1550,3,23,Published 2019 and later,TRUE
 10.1257/aer.20201571,Human Capital Depreciation and Returns to Experience,AER,2022,11,2020,1571,3,27,Published 2019 and later,TRUE
 10.1257/aer.20201605,The End of Economic Growth? Unintended Consequences of a Declining Population,AER,2022,11,2020,1605,3,27,Published 2019 and later,TRUE
-10.1257/aer.20201653,Measuring Racial Discrimination in Bail Decisions,AER,2022,9,2020,1653,3,25,Published 2019 and later,TRUE
+10.1257/aer.20201653,Measuring Racial Discrimination in Bail Decisions,AER,2022,9,2020,1653,4,22,Published 2019 and later,TRUE
 10.1257/aer.20201660,Does Context Outweigh Individual Characteristics in Driving Voting Behavior? Evidence from Relocations within the United States,AER,2022,4,2020,1660,4,17,Published 2019 and later,TRUE
 10.1257/aer.20201661,"Fictional Money, Real Costs: Impacts of Financial Salience on Disadvantaged Students",AER,2022,3,2020,1661,4,16,Published 2019 and later,TRUE
 10.1257/aer.20201713,Belief Distortions and Macroeconomic Fluctuations,AER,2022,7,2020,1713,4,20,Published 2019 and later,TRUE
@@ -1854,7 +1824,6 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20202016,"Dynamic Price Competition, Learning-by-Doing, and Strategic Buyers",AER,2022,4,2020,2016,4,17,Published 2019 and later,TRUE
 10.1257/aer.20210059,Factor Market Failures and the Adoption of Irrigation in Rwanda,AER,2022,7,2021,59,1,17,Published 2019 and later,TRUE
 10.1257/aer.20210083,Consumer Information and the Limits to Competition,AER,2022,2,2021,83,1,12,Published 2019 and later,FALSE
-10.1257/aer.20210121,Methods Matter: p-Hacking and Publication Bias in Causal Analysis in Economics: Comment,AER,2022,9,2021,121,1,19,Published 2019 and later,FALSE
 10.1257/aer.20210122,Market Access and Quality Upgrading: Evidence from Four Field Experiments,AER,2022,8,2021,122,1,18,Published 2019 and later,TRUE
 10.1257/aer.20210154,Misspecified Politics and the Recurrence of Populism,AER,2022,3,2021,154,1,13,Published 2019 and later,TRUE
 10.1257/aer.20210220,Supply Network Formation and Fragility,AER,2022,8,2021,220,1,18,Published 2019 and later,FALSE
@@ -1883,7 +1852,6 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20211252,Posterior Separable Cost of Information,AER,2022,10,2021,1252,3,14,Published 2019 and later,TRUE
 10.1257/aer.20211428,Dynamic Amnesty Programs,AER,2022,12,2021,1428,4,13,Published 2019 and later,FALSE
 10.1257/aer.20211616,The Psychosocial Value of Employment: Evidence from a Refugee Camp,AER,2022,11,2021,1616,4,12,Published 2019 and later,TRUE
-10.1257/aer.20220277,Methods Matter: p-Hacking and Publication Bias in Causal Analysis in Economics: Reply,AER,2022,9,2022,277,1,7,Published 2019 and later,TRUE
 10.1257/aeri.20200373,Can Technology Solve the Principal-Agent Problem? Evidence from China’s War on Air Pollution,AER:Insights,2022,3,2020,373,2,22,Published 2019 and later,TRUE
 10.1257/aeri.20200588,Immigration and Entrepreneurship in the United States,AER:Insights,2022,3,2020,588,3,19,Published 2019 and later,TRUE
 10.1257/aeri.20200662,Risk Exposure and Acquisition of Macroeconomic Information,AER:Insights,2022,3,2020,662,4,16,Published 2019 and later,TRUE
@@ -1923,7 +1891,7 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/app.20200398,Infrastructure Costs,AEJ:Applied Economics,2023,4,2020,398,2,35,Published 2019 and later,TRUE
 10.1257/app.20200448,Employer Responses to Family Leave Programs,AEJ:Applied Economics,2023,1,2020,448,2,32,Published 2019 and later,FALSE
 10.1257/app.20200456,A Glimpse of Freedom: Allied Occupation and Political Resistance in East Germany,AEJ:Applied Economics,2023,1,2020,456,2,32,Published 2019 and later,TRUE
-10.1257/app.20200498,School Attendance Boundaries and the Segregation of Public Schools in the United States,AEJ:Applied Economics,2023,7,2020,498,3,35,Published 2019 and later,TRUE
+10.1257/app.20200498,School Attendance Boundaries and the Segregation of Public Schools in the United States,AEJ:Applied Economics,2023,7,2020,498,2,38,Published 2019 and later,TRUE
 10.1257/app.20200503,Are Small Firms Labor Constrained? Experimental Evidence from Ghana,AEJ:Applied Economics,2023,4,2020,503,3,32,Published 2019 and later,TRUE
 10.1257/app.20200505,Energy Saving May Kill: Evidence from the Fukushima Nuclear Accident,AEJ:Applied Economics,2023,4,2020,505,3,32,Published 2019 and later,TRUE
 10.1257/app.20200547,"Temperature, Worker Productivity, and Adaptation: Evidence from Survey Data Production",AEJ:Applied Economics,2023,1,2020,547,3,29,Published 2019 and later,TRUE
@@ -1954,7 +1922,7 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/app.20210211,From Hashtag to Hate Crime: Twitter and Antiminority Sentiment,AEJ:Applied Economics,2023,7,2021,211,2,26,Published 2019 and later,TRUE
 10.1257/app.20210292,High School Majors and Future Earnings,AEJ:Applied Economics,2023,1,2021,292,2,20,Published 2019 and later,TRUE
 10.1257/app.20210349,Does Cash Bail Deter Misconduct?,AEJ:Applied Economics,2023,7,2021,349,2,26,Published 2019 and later,TRUE
-10.1257/app.20210383,Tax Refund Uncertainty: Evidence and Welfare Implications,AEJ:Applied Economics,2023,4,2021,383,3,20,Published 2019 and later,TRUE
+10.1257/app.20210383,Tax Refund Uncertainty: Evidence and Welfare Implications,AEJ:Applied Economics,2023,4,2021,383,2,23,Published 2019 and later,TRUE
 10.1257/app.20210446,Contagious Dishonesty: Corruption Scandals and Supermarket Theft,AEJ:Applied Economics,2023,10,2021,446,3,26,Published 2019 and later,TRUE
 10.1257/app.20210500,When Externalities Collide: Influenza and Pollution,AEJ:Applied Economics,2023,4,2021,500,3,20,Published 2019 and later,TRUE
 10.1257/app.20210501,How Cable News Reshaped Local Government,AEJ:Applied Economics,2023,10,2021,501,3,26,Published 2019 and later,TRUE
@@ -2176,7 +2144,7 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20200239,Optimal Monetary Policy According to HANK,AER,2023,7,2020,239,1,41,Published 2019 and later,TRUE
 10.1257/aer.20200252,The Costs of Job Displacement over the Business Cycle and Its Sources: Evidence from Germany,AER,2023,5,2020,252,1,39,Published 2019 and later,TRUE
 10.1257/aer.20200292,Intergenerational Mobility in American History: Accounting for Race and Measurement Error,AER,2023,12,2020,292,1,46,Published 2019 and later,TRUE
-10.1257/aer.20200636,Optimal Policy under Dollar Pricing,AER,2023,7,2020,636,1,41,Published 2019 and later,TRUE
+10.1257/aer.20200636,Optimal Policy under Dollar Pricing,AER,2023,7,2020,636,2,38,Published 2019 and later,TRUE
 10.1257/aer.20200780,The Political Economy of International Regulatory Cooperation,AER,2023,8,2020,780,2,39,Published 2019 and later,FALSE
 10.1257/aer.20200847,Beyond Teachers: Estimating Individual School Counselors’ Effects on Educational Attainment,AER,2023,11,2020,847,2,42,Published 2019 and later,TRUE
 10.1257/aer.20201220,An Alternative Explanation for the “Fed Information Effect”,AER,2023,3,2020,1220,3,31,Published 2019 and later,TRUE
@@ -2184,7 +2152,6 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20201333,Enabling or Limiting Cognitive Flexibility? Evidence of Demand for Moral Commitment,AER,2023,2,2020,1333,3,30,Published 2019 and later,TRUE
 10.1257/aer.20201434,"Droughts, Deluges, and (River) Diversions: Valuing Market-Based Water Reallocation",AER,2023,2,2020,1434,3,30,Published 2019 and later,TRUE
 10.1257/aer.20201479,Globalization and Pandemics,AER,2023,4,2020,1479,3,32,Published 2019 and later,TRUE
-10.1257/aer.20201753,Who Benefits from State Corporate Tax Cuts? A Local Labor Markets Approach with Heterogeneous Firms: Comment,AER,2023,8,2020,1753,4,33,Published 2019 and later,TRUE
 10.1257/aer.20201860,Judging Judge Fixed Effects,AER,2023,1,2020,1860,4,26,Published 2019 and later,TRUE
 10.1257/aer.20201867,<i>The Birth of a Nation:</i>Media and Racial Hate,AER,2023,6,2020,1867,4,31,Published 2019 and later,TRUE
 10.1257/aer.20201919,The Economic Origins of Government,AER,2023,10,2020,1919,4,35,Published 2019 and later,TRUE
@@ -2244,7 +2211,6 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/aer.20220915,"Confidence, Self-Selection, and Bias in the Aggregate",AER,2023,7,2022,915,3,11,Published 2019 and later,TRUE
 10.1257/aer.20221247,"Optimal Insurance: Dual Utility, Random Losses, and Adverse Selection",AER,2023,10,2022,1247,3,14,Published 2019 and later,FALSE
 10.1257/aer.20221365,"America, Jump-Started: World War II R&amp;D and the Takeoff of the US Innovation System",AER,2023,12,2022,1365,4,13,Published 2019 and later,TRUE
-10.1257/aer.20221432,Dividend Taxes and the Allocation of Capital: Comment,AER,2023,7,2022,1432,4,8,Published 2019 and later,TRUE
 10.1257/aer.20221578,Who Controls the Agenda Controls the Legislature,AER,2023,11,2022,1578,4,12,Published 2019 and later,FALSE
 10.1257/aeri.20210014,Environmental Preferences and Technological Choices: Is Market Competition Clean or Dirty?,AER:Insights,2023,3,2021,14,1,25,Published 2019 and later,TRUE
 10.1257/aeri.20210275,Isolating Personal Knowledge Spillovers: Coinventor Deaths and Spatial Citation Differentials,AER:Insights,2023,3,2021,275,2,22,Published 2019 and later,FALSE
@@ -2299,7 +2265,7 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/app.20210428,Estimating the Distaste for Price Gouging with Incentivized Consumer Reports,AEJ:Applied Economics,2024,1,2021,428,3,29,Published 2019 and later,TRUE
 10.1257/app.20210435,Gender Attitudes in the Judiciary: Evidence from US Circuit Courts,AEJ:Applied Economics,2024,1,2021,435,3,29,Published 2019 and later,FALSE
 10.1257/app.20210579,The Employment Effects of Ethnic Politics,AEJ:Applied Economics,2024,4,2021,579,3,32,Published 2019 and later,TRUE
-10.1257/app.20210655,Improving Women’s Mental Health during a Pandemic,AEJ:Applied Economics,2024,4,2021,655,4,29,Published 2019 and later,TRUE
+10.1257/app.20210655,Improving Women’s Mental Health during a Pandemic,AEJ:Applied Economics,2024,4,2021,655,3,32,Published 2019 and later,TRUE
 10.1257/app.20210656,Maternal Dengue and Health Outcomes of Children,AEJ:Applied Economics,2024,4,2021,656,4,29,Published 2019 and later,TRUE
 10.1257/app.20210683,Is It Who You Are or What You Get? Comparing the Impacts of Loans and Grants for Microenterprise Development,AEJ:Applied Economics,2024,1,2021,683,4,26,Published 2019 and later,TRUE
 10.1257/app.20210686,Intergenerational Mobility in India: New Measures and Estimates across Time and Social Groups,AEJ:Applied Economics,2024,4,2021,686,4,29,Published 2019 and later,TRUE
@@ -2345,7 +2311,7 @@ doi,title,Journal,year,pub_month,sub_year,seq,sub_quarter,months_to_pub,period,h
 10.1257/pol.20200500,Behavioral Responses to State Income Taxation of High Earners: Evidence from California,AEJ:Economic Policy,2024,2,2020,500,3,42,Published 2019 and later,TRUE
 10.1257/pol.20200579,Hassle Costs versus Information: How Do Prescription Drug Monitoring Programs Reduce Opioid Prescribing?,AEJ:Economic Policy,2024,2,2020,579,3,42,Published 2019 and later,TRUE
 10.1257/pol.20200587,Fighting Crime in Lawless Areas: Evidence from Slums in Rio de Janeiro,AEJ:Economic Policy,2024,2,2020,587,3,42,Published 2019 and later,TRUE
-10.1257/pol.20200683,Labor Market Effects of Credit Constraints: Evidence from a Natural Experiment,AEJ:Economic Policy,2024,8,2020,683,3,48,Published 2019 and later,TRUE
+10.1257/pol.20200683,Labor Market Effects of Credit Constraints: Evidence from a Natural Experiment,AEJ:Economic Policy,2024,8,2020,683,4,45,Published 2019 and later,TRUE
 10.1257/pol.20200694,The Returns to STEM Programs for Less-Prepared Students,AEJ:Economic Policy,2024,5,2020,694,4,42,Published 2019 and later,TRUE
 10.1257/pol.20200734,Does Health-Care Consolidation Harm Patients? Evidence from Maternity Ward Closures,AEJ:Economic Policy,2024,2,2020,734,4,39,Published 2019 and later,TRUE
 10.1257/pol.20200843,Attendance Boundary Policies and the Limits to Combating School Segregation,AEJ:Economic Policy,2024,2,2020,843,4,39,Published 2019 and later,TRUE

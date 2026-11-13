@@ -4,19 +4,37 @@ title: "Did the 2019 policy change packages or the time from submission to publi
 
 The AEA-wide data and code policy, with review by the AEA Data Editor, applies to articles published from 2019. Two outcomes are tested, separately:
 
-- **(a) Presence of a replication package:** whether a research article has one (linear probability model, and probit). Articles from 2010 on, all AEA journals.
+- **(a) Presence of a replication package:** whether a research article has one (linear probability model, and probit). Articles from 2010 on.
 - **(b) Time from submission to publication:** months from submission to print publication. AER, AER:Insights, and AEJs, in the years where it can be measured (2016–2024, depending on the journal).
 
-## Specifications
+The main analysis covers the AER, AER:Insights and the four AEJs ("main journals"). The AEA P&P, JEL and JEP, and the difference in differences that uses them as newly covered journals, are on the [Appendix](appendix.qmd) page. Comments, replies and errata are excluded.
+
+## Main specification: event study
+
+For each outcome, the main specification is an event study on articles published 2015 to the latest complete year, in the AER and the four AEJs (AER:Insights, first published in 2019, has no years before the policy):
+
+$$Y_{ijt} = \alpha_j + f_j(q_i) + \sum_{k \neq 2018} \beta_k \, \mathbb{1}(t = k) + \varepsilon_{ijt},$$
+
+where $t$ is the year of print publication, $q_i$ the publication quarter, and 2018, the last year before the policy, is the reference year. Each $\beta_k$ is shown, so the years before the policy (2015–2017) and after it (2019 on) can be compared side by side. All main journals are covered by the policy from 2019, so there is no untreated comparison group, and year effects cannot be separated from the policy. The **Trend** selector chooses $f_j$:
+
+- **No trend:** $f_j = 0$. $\beta_k$ is the mean in year $k$ minus the mean in 2018, within journal.
+- **Linear or quadratic trend:** journal-specific trends in publication quarter, fitted on 2015–2018 only and extrapolated. $\beta_k$ is the deviation of year $k$ from the extrapolated trend, relative to 2018. Before 2019, the points show how well the trend fits.
+- **Rolling trend:** each year $k$ is compared with the linear journal trends of the three years before it ($k-3$ to $k-1$). $\beta_k$ is the jump in year $k$; there is no reference year, and the years before 2019 are placebo jumps.
+
+The 95% confidence intervals are from a bootstrap that resamples journal issues within journal and year (499 draws). For the time to publication, the years before 2019 are 2016–2018 for the AEJs and 2018 only for the AER, so the trend versions use the AEJs only, and the rolling trend starts in 2019. The pooled estimates are in Table E1 on [Methods](methods.qmd#event-study).
+
+## Robustness: static regressions
 
 All models are OLS on articles, with standard errors clustered by journal × year of publication. For replication packages, each model is also estimated as a probit; the probit estimate shown is the average change in the probability of having a package for the articles with *post* = 1, in percentage points. Linear trends are in **publication quarter**, centered on the first quarter of the cutoff year.
 
 The policy indicator is defined by **year of print publication**: $\text{Post}^{c}_{t} = 1$ if the article was published in year $t \geq c$. The actual cutoff is $c = 2019$, so $\text{Post}^{2019}_t = 1$ for articles *published* in 2019 or later, whatever their submission or acceptance date. The equations are on [Methods](methods.qmd#regression-equations).
 
-- **All journals pooled:** journal fixed effects, with and without a linear trend for each journal. For packages, also a difference in differences: P&P, JEL and JEP (no policy before 2019) against the AER and AEJs. For the time to publication, also *post* × *has package*.
+- **Main journals pooled:** journal fixed effects, with and without a linear trend for each journal. For the time to publication, also *post* × *has package*.
 - **A single journal:** with one journal, the journal fixed effect is just the intercept. The model without a trend is the difference in means before and after, and the model with a trend adds one linear trend in publication quarter.
 
 The full list of specifications is in Table 6 on [Methods](methods.qmd).
+
+**Matched window.** Pooled before/after averages depend on how many years are on each side. The actual cutoff is also estimated on the same number of years before and after 2019: 2015–2022 for packages, 2016–2021 for the time to publication.
 
 **Placebos.** The same models are estimated with fake cutoffs $c$: articles published in 2017 or later (or 2018, 2020, 2021) are coded as treated. Placebos at 2017 and 2018 use only articles published before 2019. Placebos at 2020 and 2021 use only articles published from 2019 on. The actual break is never inside a placebo sample. If the 2019 estimate reflects the policy, the placebo estimates should be close to zero.
 
@@ -24,42 +42,12 @@ The full list of specifications is in Table 6 on [Methods](methods.qmd).
 
 ```{ojs}
 //| echo: false
+import {estimatePlot, eventPlot, trendLabels, mainLabel} from "./regplot.js"
+es = FileAttachment("data/event_study.csv").csv({typed: true})
 regPkg = FileAttachment("data/regressions_packages.csv").csv({typed: true})
 regTtp = FileAttachment("data/regressions_time_to_pub.csv").csv({typed: true})
-journalOrder = ["AER","AER:Insights","AEA P&P","AEJ:Applied Economics","AEJ:Economic Policy",
-                "AEJ:Macro","AEJ:Micro","JEL","JEP"]
-journalsIn = regs => ["All journals", ...journalOrder.filter(j => regs.some(d => d.Journal === j))]
-// with a single journal, the journal FE is the intercept: label the models accordingly
-specLabelsFor = j => j === "All journals"
-  ? ({its_fe: "(1) Journal FE", its_trend: "(2) Journal FE + journal quarterly trends", did: "(3) DiD (year FE)",
-      did_trend: "(4) DiD + group quarterly trends", pkg: "(5) Post × has package"})
-  : ({its_fe: "(6) Before/after (no trend)", its_trend: "(7) Before/after + quarterly trend"})
-function estimatePlot(regs, j, {scale = 1, ylabel, title}) {
-  const specLabels = specLabelsFor(j);
-  const rsel = regs.filter(d => d.Journal === j).map(d => ({...d, Spec: specLabels[d.spec],
-          kind: d.type === "actual" ? "Actual: published 2019 and later" : "Placebo",
-          est: scale * d.estimate, lo95: scale * d.lo, hi95: scale * d.hi}));
-  const specs = Object.values(specLabels).filter(s => rsel.some(d => d.Spec === s));
-  const fx = d => specs.indexOf(d.Spec) % 2, fy = d => Math.floor(specs.indexOf(d.Spec) / 2);
-  return Plot.plot({
-    title, width, height: 280 * Math.ceil(specs.length / 2), marginLeft: 50, marginTop: 30, marginBottom: 45,
-    fx: {axis: null}, fy: {axis: null, padding: 0.2},
-    x: {type: "point", label: "Cutoff c: post = 1 if published in year c or later", tickFormat: "d",
-        domain: [2017, 2018, 2019, 2020, 2021]},
-    y: {label: ylabel, grid: true},
-    color: {legend: true, domain: ["Actual: published 2019 and later", "Placebo"], range: ["#C2611F", "#2F6DB5"]},
-    marks: [
-      Plot.ruleY([0], {stroke: "#888"}),
-      Plot.text(rsel.filter((d, i, a) => a.findIndex(e => e.Spec === d.Spec) === i),
-                {fx, fy, text: "Spec", frameAnchor: "top", fontWeight: "bold", fontSize: 12, dy: -14}),
-      Plot.ruleX(rsel, {x: "cutoff", y1: "lo95", y2: "hi95", stroke: "kind", strokeWidth: 2.5, fx, fy}),
-      Plot.dot(rsel, {x: "cutoff", y: "est", fill: "kind", r: 4, fx, fy,
-               channels: {Years: d => `${d.first_year}–${d.last_year}`, n: "n", Clusters: "n_clusters",
-                          "Pre mean": d => (scale * d.mean_pre).toFixed(1), p: d => d.p.toFixed(3)},
-               tip: {format: {x: "d", fx: false, fy: false, y: d => d.toFixed(2)}}})
-    ]
-  });
-}
+mainOrder = ["AER","AER:Insights","AEJ:Applied Economics","AEJ:Economic Policy","AEJ:Macro","AEJ:Micro"]
+journalsIn = regs => [mainLabel, ...mainOrder.filter(j => regs.some(d => d.Journal === j))]
 ```
 
 ::: {.panel-tabset}
@@ -68,14 +56,45 @@ function estimatePlot(regs, j, {scale = 1, ylabel, title}) {
 
 ```{ojs}
 //| echo: false
-viewof pkgMethod = Inputs.radio(["Linear probability model", "Probit (average effect)"],
-                                {label: "Method:", value: "Linear probability model"})
-viewof pkgJournal = Inputs.select(journalsIn(regPkg), {label: "Journal", value: "All journals"})
+viewof pkgJournal = Inputs.select(journalsIn(regPkg), {label: "Journal", value: mainLabel})
+```
+
+### Event study
+
+```{ojs}
+//| echo: false
+viewof pkgTrend = Inputs.radio(new Map(Object.entries(trendLabels).map(([k, v]) => [v, k])),
+                               {label: "Trend:", value: "none"})
 ```
 
 ```{ojs}
 //| echo: false
-estimatePlot(regPkg.filter(d => d.method === (pkgMethod.startsWith("Probit") ? "Probit" : "Linear probability")),
+pkgJournal === "AER:Insights" ? html`<p><em>AER:Insights has no years before 2019 and is not in the event study.</em></p>` :
+eventPlot(Plot, width, es.filter(d => d.outcome === "has_package"), pkgJournal, pkgTrend, {scale: 100,
+  ylabel: "Share with a package, relative (percentage points)",
+  title: `Articles with replication packages, by year of publication: ${pkgJournal === mainLabel ? "AER and AEJs" : pkgJournal}`})
+```
+
+```{ojs}
+//| echo: false
+html`<div class="fig-notes">
+<p>Points: ${pkgTrend === "none" ? "coefficient on each year of publication, relative to 2018 (hollow point), with journal fixed effects" : pkgTrend === "rolling" ? "difference between the share in each year and the linear journal trends (in publication quarter) fitted on the three years before it" : `deviation of each year from journal-specific ${pkgTrend} trends in publication quarter fitted on 2015–2018, relative to 2018 (hollow point)`}, in percentage points of the share of articles with a replication package. Vertical bars: 95% bootstrap confidence intervals (issues resampled within journal and year).</p>
+<p>Blue: published before 2019. Orange: published 2019 and later, under the AEA-wide policy. Dashed line: the policy.</p>
+<p>Sample: research articles in ${pkgJournal === mainLabel ? "the AER and the four AEJs" : pkgJournal}, published 2015 to the latest complete year${pkgTrend === "rolling" ? " (the trends for 2015–2017 use 2012–2016)" : ""}. Packages: AEA Data and Code Repository at openICPSR.</p>
+</div>`
+```
+
+### Static regressions (robustness)
+
+```{ojs}
+//| echo: false
+viewof pkgMethod = Inputs.radio(["Linear probability model", "Probit (average effect)"],
+                                {label: "Method:", value: "Linear probability model"})
+```
+
+```{ojs}
+//| echo: false
+estimatePlot(Plot, width, regPkg.filter(d => d.method === (pkgMethod.startsWith("Probit") ? "Probit" : "Linear probability")),
   pkgJournal, {scale: 100,
   ylabel: "Change in the share of articles with a package (percentage points)",
   title: `Estimated change in articles with replication packages: ${pkgJournal}, ${pkgMethod.startsWith("Probit") ? "probit (average effect on articles with post = 1)" : "linear probability model"}`})
@@ -85,33 +104,70 @@ estimatePlot(regPkg.filter(d => d.method === (pkgMethod.startsWith("Probit") ? "
 //| echo: false
 html`<div class="fig-notes">
 <p>Points: ${pkgMethod.startsWith("Probit") ? "probit average effect of the policy term on the probability that an article has a replication package, over the articles with the term = 1" : "linear probability model coefficient on the policy term"}, in percentage points. Vertical bars: 95% confidence intervals, with standard errors clustered by journal × year of publication.</p>
-<p>Orange: actual cutoff, 2019 (all years). Blue: placebo cutoffs, 2017 and 2018 (articles published before 2019 only) and 2020 and 2021 (articles published 2019 and later only). Post = 1 for articles published in the cutoff year or later.</p>
+<p>Orange: actual cutoff, 2019 (all years); light orange: actual cutoff on a matched window, the same number of years before and after 2019. Blue: placebo cutoffs, 2017 and 2018 (articles published before 2019 only) and 2020 and 2021 (articles published 2019 and later only). Post = 1 for articles published in the cutoff year or later.</p>
 <p>Panels: specifications, numbered as in Table 6 on <a href="methods.html#regression-equations">Methods</a>. Trends are linear in publication quarter. ${pkgMethod.startsWith("Probit") ? "Missing points: probit not estimable, because the outcome does not vary before or after the cutoff." : ""}</p>
-<p>Sample: ${pkgJournal === "All journals" ? "research articles in all AEA journals" : pkgJournal + " research articles"}, published 2010 to the latest complete year. Packages: AEA Data and Code Repository at openICPSR.</p>
+<p>Sample: ${pkgJournal === mainLabel ? "research articles in the AER, AER:Insights and AEJs" : pkgJournal + " research articles"}, published 2010 to the latest complete year. Packages: AEA Data and Code Repository at openICPSR.</p>
 </div>`
 ```
 
-Estimates, confidence intervals and sample sizes for every journal and both methods are in Tables 7 and 9 on [Methods](methods.qmd).
+Estimates, confidence intervals and sample sizes for every journal and both methods are in Tables 7 and 9 on [Methods](methods.qmd); the P&P, JEL and JEP are on the [Appendix](appendix.qmd) page.
 
 ### Reading the results
 
-- Without trends, the 2019 estimate is positive. But the placebos before 2019 are just as large, so the share was already rising before the policy.
-- With journal or group trends, nothing is left at 2019.
-- P&P and JEP shares jumped around 2013–14, well before the policy.
-- JEL is the exception. Its share went from under 10% before 2019 to 20–38% from 2020 on. Its 2019 estimate is +24 points without a trend (+10, not significant, with one). The significant 2020 "placebo" puts the jump in 2020, which fits the lag between acceptance under the new policy and print publication.
-- AER, AEJ:Applied, AEJ:Economic Policy, and AEJ:Macro, which already had policies, were at 75–100% and flat. AEJ:Micro is lower and varies more, because many of its articles are theory papers without data.
-- The probit gives the same picture. Its average effects are within a few points of the linear probability estimates. A probit cannot be estimated for a single journal when its outcome is constant before or after the cutoff (for example, AEJ:Applied at the 2018 and 2020 placebos), so some points are missing.
+**Event study.**
+
+- The main journals already had data policies (the AER since 2005, the AEJs since 2009), and most of their articles already had a package before 2019: 77% pooled over 2010–18.
+- Without a trend, the shares in 2015–2017 were 4–7 points below 2018. 2019 is +1.1 points from 2018 and not significant, and the later years are within a few points of 2018. The share reached its post-2019 level by 2018; there is no jump at 2019.
+- The rolling trend tells the same story. The 2019 jump is +1.9 points, not significant. The largest jump before 2020 is in 2018 (+6.3), the year before the policy.
+- With the linear trend fitted on 2015–2018, 2019 is on the trend (−0.1). The later years fall below it, because a rising trend is extrapolated past shares that are already close to 100%. The quadratic trend fitted on four years cannot be extrapolated seven years; its post-2019 points are shown only for completeness.
+- 2020 is low in every version (−8.5 points without a trend), mostly in the AER (−12) and AEJ:Macro (−11), and 2021 is back at the 2018 level. Packages for articles published in 2019–2020 that are not yet in the migration file would produce such a dip; the 2025 migration list will tell.
+- By journal: the AER rose by about 10 points from 2015–17 to 2018, before the policy, and stayed there. AEJ:Applied is at close to 100% throughout (its bootstrap intervals collapse to zero when every article in a year has a package). AEJ:Micro varies the most, because many of its articles are theory papers without data.
+
+**Static regressions.**
+
+- Pooled, the 2019 estimate is +2.7 points without trends (just significant) on 2010–2025, but the 2018 placebo is larger (+4.6). With journal trends, it is −1.7 points and not significant.
+- On a matched window of four years on each side (2015–2022), the 2019 estimate is +1.1 points without trends and +1.6 with them, neither significant.
+- The probit gives the same picture. Its average effects are within a few points of the linear probability estimates. A probit cannot be estimated for a single journal when its outcome is constant before or after the cutoff (for example, AEJ:Applied, at close to 100%, at the 2018 and 2020 placebos), so some points are missing.
 
 ## Time from submission to publication
 
 ```{ojs}
 //| echo: false
-viewof ttpJournal = Inputs.select(journalsIn(regTtp), {label: "Journal", value: "All journals"})
+viewof ttpJournal = Inputs.select(journalsIn(regTtp), {label: "Journal", value: mainLabel})
+```
+
+### Event study
+
+```{ojs}
+//| echo: false
+viewof ttpTrend = Inputs.radio(new Map(Object.entries(trendLabels).map(([k, v]) => [v, k])),
+                               {label: "Trend:", value: "none"})
 ```
 
 ```{ojs}
 //| echo: false
-estimatePlot(regTtp, ttpJournal, {scale: 1,
+ttpJournal === "AER:Insights" ? html`<p><em>AER:Insights has no years before 2019 and is not in the event study.</em></p>` :
+es.some(d => d.outcome === "months_to_pub" && d.Journal === ttpJournal && d.trend === ttpTrend) ?
+eventPlot(Plot, width, es.filter(d => d.outcome === "months_to_pub"), ttpJournal, ttpTrend, {scale: 1,
+  ylabel: "Months from submission to publication, relative",
+  title: `Time from submission to publication, by year of publication: ${ttpJournal === mainLabel ? "AER and AEJs" : ttpJournal}`}) :
+html`<p><em>Not estimated: ${ttpJournal} has too few years before 2019 to fit a trend.</em></p>`
+```
+
+```{ojs}
+//| echo: false
+html`<div class="fig-notes">
+<p>Points: ${ttpTrend === "none" ? "coefficient on each year of publication, relative to 2018 (hollow point), with journal fixed effects" : ttpTrend === "rolling" ? "difference between the mean in each year and the linear journal trends (in publication quarter) fitted on the three years before it" : `deviation of each year from journal-specific ${ttpTrend} trends in publication quarter fitted on the years before 2019, relative to 2018 (hollow point)`}, in months from submission to print publication. Vertical bars: 95% bootstrap confidence intervals (issues resampled within journal and year).</p>
+<p>Blue: published before 2019. Orange: published 2019 and later, under the AEA-wide policy. Dashed line: the policy.</p>
+<p>Sample: ${ttpJournal === mainLabel ? "AER and AEJ" : ttpJournal} articles with manuscript-number DOIs, in years in which the submission dates can be assigned (AEJs from 2016, AER from 2018). ${ttpTrend !== "none" ? "Trends need at least three years before 2019, so the AER is not included." : ""}</p>
+</div>`
+```
+
+### Static regressions (robustness)
+
+```{ojs}
+//| echo: false
+estimatePlot(Plot, width, regTtp, ttpJournal, {scale: 1,
   ylabel: "Change in months from submission to publication",
   title: `Estimated change in the time from submission to publication (months): ${ttpJournal}`})
 ```
@@ -120,9 +176,9 @@ estimatePlot(regTtp, ttpJournal, {scale: 1,
 //| echo: false
 html`<div class="fig-notes">
 <p>Points: OLS coefficient on the policy term, in months from submission to print publication (for (5), the difference in the change for articles with a replication package). Vertical bars: 95% confidence intervals, with standard errors clustered by journal × year of publication.</p>
-<p>Orange: actual cutoff, 2019 (all years). Blue: placebo cutoffs, 2017 and 2018 (articles published before 2019 only) and 2020 and 2021 (articles published 2019 and later only). Post = 1 for articles published in the cutoff year or later.</p>
+<p>Orange: actual cutoff, 2019 (all years); light orange: actual cutoff on a matched window, the same number of years before and after 2019. Blue: placebo cutoffs, 2017 and 2018 (articles published before 2019 only) and 2020 and 2021 (articles published 2019 and later only). Post = 1 for articles published in the cutoff year or later.</p>
 <p>Panels: specifications, numbered as in Table 6 on <a href="methods.html#regression-equations">Methods</a>. Trends are linear in publication quarter.</p>
-<p>Sample: ${ttpJournal === "All journals" ? "AER, AER:Insights and AEJ" : ttpJournal} articles with manuscript-number DOIs, in years in which the submission dates can be assigned.</p>
+<p>Sample: ${ttpJournal === mainLabel ? "AER, AER:Insights and AEJ" : ttpJournal} articles with manuscript-number DOIs, in years in which the submission dates can be assigned.</p>
 </div>`
 ```
 
@@ -130,14 +186,25 @@ Estimates, confidence intervals and sample sizes for every journal are in Tables
 
 ### Reading the results
 
-- Without trends, the time from submission to publication is about 4 months longer after 2019. But the placebos are positive too: +4 months at 2018, before the policy, and +2 to +3 at 2020–21, after it. Times rose gradually over 2017–2022; there was no single step at 2019.
-- With journal quarterly trends, the 2019 estimate is small and not significant (+0.5 months). The 2020 and 2021 placebos stay at about +2.
+**Event study.**
+
+- Without a trend, articles published in 2016–2017 took about 5½ months less from submission to publication than those published in 2018. 2019 is 1.2 months *below* 2018 (not significant), and 2020–2024 are 1–2½ months above it. Most of the increase happened between 2017 and 2018, before the policy.
+- The rolling trend shows no jump at 2019 (−3.2 months, not significant). None of the yearly jumps after 2019 is significant; they are within ±2½ months.
+- With the linear trend fitted on 2016–2018 (AEJs only), the times after 2019 are *below* the extrapolated trend, by 4 to 13 months: they grew more slowly than before. With only three years, the trend is steep and uncertain, and the quadratic version is not informative.
+- There is no sign that the policy lengthened the time from submission to publication.
+
+**Static regressions.**
+
+- Without trends, the pooled 2019 estimate is +4.2 months on 2016–2024 and +3.2 on the matched window 2016–2021. But the placebos are positive too: +4 months at 2018, before the policy. This is the 2017–18 increase seen in the event study.
+- With journal quarterly trends, the 2019 estimate is +0.4 months (not significant) on all years and −2.7 months on the matched window.
 - The change is no different for articles with a replication package.
 
 :::
 
 ## Caveats
 
-- The policy is a single break in time, with no untreated comparison, so trends and other changes in the same years cannot be separated from it. These include COVID, a publication backlog in 2021–22, and editorial changes.
+- The policy is a single break in time, and the main journals have no untreated comparison, so trends and other changes in the same years cannot be separated from it. These include COVID, a publication backlog in 2021–22, and editorial changes.
 - For the time to publication, the years before 2019 are only 2016–18 (2018 for the AER). The trend models are therefore barely identified in the placebo samples before 2019, and the 2017 and 2018 trend placebos (−4.0 and +2.0 months) should not be read as evidence either way.
-- Clusters are journal × year. With few years per journal, the confidence intervals of the single-journal estimates are approximate.
+- Static regressions: clusters are journal × year. With few years per journal, the confidence intervals of the single-journal estimates are approximate.
+- Event study: the bootstrap resamples issues within journal and year. The AEJs have four issues a year, the AER twelve, so the intervals for a single AEJ are approximate. When every article in a year has a package, the interval for that year collapses to zero.
+- Event study: 2018 is the reference year, and for packages it was a high year. Comparisons are with 2018, not with the average before 2019; the rolling-trend version does not depend on it.

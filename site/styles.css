@@ -1,3 +1,7 @@
 /* Notes under figures, in the style of the captions of the pipeline figures */
 .fig-notes { font-size: 0.82rem; opacity: 0.8; line-height: 1.35; margin: 0.2rem 0 1.6rem 0; }
 .fig-notes p { margin: 0 0 0.15rem 0; }
+
+/* Data page: let the table headers wrap so that narrow columns stay readable */
+.data-wide table thead th { white-space: normal !important; vertical-align: bottom; line-height: 1.2; }
+.data-wide table td { vertical-align: top; }

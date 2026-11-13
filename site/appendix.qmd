@@ -1,0 +1,145 @@
+---
+title: "Appendix: AEA Papers and Proceedings, JEL, and JEP"
+---
+
+```{r}
+suppressMessages({library(readr); library(dplyr); library(tidyr); library(knitr)})
+rd  <- function(f) read_csv(file.path("data", f), show_col_types=FALSE)
+pct <- function(x) paste0(round(100*x), "%")
+num <- function(x, d=1) ifelse(is.na(x), "–", formatC(x, format="f", digits=d))
+sgn <- function(x, d=1) ifelse(is.na(x), "–", sprintf(paste0("%+.", d, "f"), x))
+ci  <- function(lo, hi, d=1) ifelse(is.na(lo), "–", paste0("[", num(lo, d), ", ", num(hi, d), "]"))
+pv  <- function(p) ifelse(is.na(p), "–", ifelse(p < 0.001, "< 0.001", sprintf("%.3f", p)))
+app <- c("AEA P&P","JEL","JEP")
+did.label <- "DiD: P&P, JEL, JEP vs AER, AEJs"
+reg <- rd("regressions_packages.csv") %>%
+  mutate(method=if_else(method=="Probit", "Probit (average effect)", "Linear probability"))
+```
+
+The AEA Papers and Proceedings (P&P), the Journal of Economic Literature (JEL) and the Journal of Economic Perspectives (JEP) are not part of the main analysis. They had no data policy before 2019, and they publish mostly short papers, surveys and essays, many without data. This page shows their packages over time, and the policy regressions for them, including the difference in differences that compares them with the AER and AEJs. The P&P includes the P&P articles printed in the May issue of the AER through 2017. Comments, replies and errata are excluded. They are not in the time-to-publication analysis, because their DOIs carry no manuscript numbers.
+
+## Replication packages by journal
+
+```{ojs}
+//| echo: false
+share = FileAttachment("data/share_by_journal_year.csv").csv({typed: true})
+viewof aj = Inputs.select(["AEA P&P", "JEL", "JEP"], {label: "Journal", value: "AEA P&P"})
+asel = share.filter(d => d.Journal === aj)
+lastYear = d3.max(share, d => d.year)
+policyLines = [{year: 2005, label: "2005: AER policy"}, {year: 2009, label: "2009: AEJs"},
+               {year: 2019, label: "2019: AEA-wide"}]
+```
+
+```{ojs}
+//| echo: false
+Plot.plot({
+  title: `${aj}: share of articles with a replication package`,
+  width, height: 360, marginLeft: 50,
+  x: {label: null, tickFormat: "d", domain: [1998.5, lastYear + 0.5]},
+  y: {label: "Share with a package (%)", domain: [0, 100], grid: true},
+  marks: [
+    Plot.rect([{x1: 2018.5, x2: lastYear + 0.5}], {x1: "x1", x2: "x2", y1: 0, y2: 100, fill: "#E1EEE3", fillOpacity: 0.7}),
+    Plot.ruleX(policyLines, {x: d => d.year - 0.5, stroke: "#44546A", strokeDasharray: "4,3"}),
+    Plot.text(policyLines, {x: d => d.year - 0.5, y: 100, text: "label", dy: -2, textAnchor: "start", dx: 3,
+                            fill: "#44546A", fontSize: 10}),
+    Plot.line(asel, {x: "year", y: d => 100 * d.share, stroke: "#1B4F8A", strokeWidth: 1.5}),
+    Plot.dot(asel, {x: "year", y: d => 100 * d.share, fill: "#1B4F8A", r: 3,
+                    channels: {Articles: "articles", "With a package": "with_package"},
+                    tip: {format: {x: "d", y: d => d.toFixed(1) + "%"}}})
+  ]
+})
+```
+
+```{ojs}
+//| echo: false
+html`<div class="fig-notes">
+<p>Blue line: share of research articles with at least one replication package. Green background: years in which ${aj} was covered by a data and code availability policy (from 2019).</p>
+<p>Dashed vertical lines: 2005 (AER data policy), 2009 (AEJs launched), 2019 (AEA-wide policy).</p>
+<p>Research articles: Crossref, excluding front matter, book reviews, editorial/administrative notes, comments, replies and errata. P&P articles printed in the May AER through 2017 are counted as AEA P&P.</p>
+<p>Replication packages: AEA Data and Code Repository at openICPSR (DataCite links and titles, article references, migrated supplements).</p>
+<p>By year of print publication, ${d3.min(asel, d => d.year)}–${lastYear}. The current year is incomplete and is not shown.</p>
+</div>`
+```
+
+**Table A1. Share of research articles with a replication package, by policy period**
+
+```{r}
+rd("packages_by_period_site.csv") %>% filter(appendix) %>%
+  transmute(Journal=group, Period=period, Years=paste0(first_year,"–",last_year),
+            Articles=articles, `With a package`=articles_with_package, Share=pct(share)) %>%
+  kable(align="lllrrr")
+```
+
+## Policy regressions
+
+The specifications are those of the [Policy regressions](regressions.qmd) page, with the equations on [Methods](methods.qmd#regression-equations). The difference in differences (equations (3) and (4)) compares the P&P, JEL and JEP, which came under a data policy in 2019, with the AER and AEJs, which had one since 2005 and 2009. AER:Insights, first published in 2019, is excluded from it. Articles published 2010 to the latest complete year.
+
+```{ojs}
+//| echo: false
+import {estimatePlot, didLabel} from "./regplot.js"
+regPkg = FileAttachment("data/regressions_packages.csv").csv({typed: true})
+viewof aMethod = Inputs.radio(["Linear probability model", "Probit (average effect)"],
+                              {label: "Method:", value: "Linear probability model"})
+viewof aReg = Inputs.select([didLabel, "AEA P&P", "JEL", "JEP"], {label: "Sample", value: didLabel})
+```
+
+```{ojs}
+//| echo: false
+estimatePlot(Plot, width, regPkg.filter(d => d.method === (aMethod.startsWith("Probit") ? "Probit" : "Linear probability")),
+  aReg, {scale: 100,
+  ylabel: "Change in the share of articles with a package (percentage points)",
+  title: `Estimated change in articles with replication packages: ${aReg === didLabel ? "difference in differences, P&P, JEL and JEP vs AER and AEJs" : aReg}, ${aMethod.startsWith("Probit") ? "probit (average effect on articles with the policy term = 1)" : "linear probability model"}`})
+```
+
+```{ojs}
+//| echo: false
+html`<div class="fig-notes">
+<p>Points: ${aMethod.startsWith("Probit") ? "probit average effect of the policy term on the probability that an article has a replication package, over the articles with the term = 1" : "linear probability model coefficient on the policy term"}, in percentage points. ${aReg === didLabel ? "The policy term is post × newly covered journal (P&P, JEL, JEP)." : "The policy term is post."} Vertical bars: 95% confidence intervals, with standard errors clustered by journal × year of publication.</p>
+<p>Orange: actual cutoff, 2019 (all years). Blue: placebo cutoffs, 2017 and 2018 (articles published before 2019 only) and 2020 and 2021 (articles published 2019 and later only). Post = 1 for articles published in the cutoff year or later.</p>
+<p>Panels: specifications, numbered as in Table 6 on <a href="methods.html#regression-equations">Methods</a>. Trends are linear in publication quarter. ${aMethod.startsWith("Probit") ? "Missing points: probit not estimable, because the outcome does not vary before or after the cutoff." : ""}</p>
+<p>Sample: ${aReg === didLabel ? "research articles in the AER, AEJs, P&P, JEL and JEP" : aReg + " research articles"}, published 2010 to the latest complete year.</p>
+</div>`
+```
+
+### Reading the results
+
+- **P&P and JEP:** their shares jumped around 2013–14, well before the policy, and kept rising. Without trends, the P&P's 2019 estimate (+33 points) is matched by its 2018 placebo (+38). The JEP's 2017 placebo (+30) is larger than its 2019 estimate (+20).
+- **JEL:** the exception. Its share went from under 10% before 2019 to 20–38% from 2020 on. Its 2019 estimate is +24 points without a trend (+9, not significant, with one). The significant 2020 "placebo" (+32) puts the jump in 2020, which fits the lag between acceptance under the new policy and print publication.
+- **Difference in differences:** +25 points at 2019 without trends, but +22 and +23 at the 2017 and 2018 placebos: the P&P and JEP were catching up with the AER and AEJs well before 2019. With group trends, the 2019 estimate is −11 points and not significant.
+- **Trend models:** one straight line through the 2013–14 jump in the P&P and JEP fits poorly, which is why some trend-model estimates are large and negative (JEP −24 points at 2019). They are not evidence of a decline.
+
+**Table A2. Difference in differences, P&P, JEL and JEP vs AER and AEJs (percentage points)**
+
+Coefficient $\beta$ on post × newly covered journal from equations (3) and (4), and the probit average effect. Columns are the cutoff $c$: post = 1 for articles published in year $c$ or later. Each cell shows the estimate, then the 95% confidence interval. \* marks p < 0.05.
+
+```{r}
+spec.did <- c(did="(3) DiD (year FE)", did_trend="(4) DiD + group quarterly trends")
+reg %>% filter(Journal==did.label, type != "actual (matched window)") %>%
+  mutate(Specification=factor(spec.did[spec], levels=spec.did),
+         value=paste0(sgn(100*estimate), ifelse(p < 0.05, "*", ""), " ", ci(100*lo, 100*hi))) %>%
+  select(Method=method, Specification, cutoff, value) %>%
+  pivot_wider(names_from=cutoff, values_from=value) %>%
+  arrange(Method, Specification) %>%
+  select(Method, Specification, `2017`, `2018`, `2019`, `2020`, `2021`) %>%
+  rename_with(~ paste0("Published ≥ ", .x, ifelse(.x == "2019", " (actual)", " (placebo)")), matches("^20")) %>%
+  kable()
+```
+
+**Table A3. Replication package, by journal (percentage points)**
+
+::: {.callout-note collapse="true" appearance="minimal"}
+## Show Table A3
+
+```{r}
+spec.single <- c(its_fe="(6) Before/after (no trend)", its_trend="(7) Before/after + quarterly trend")
+reg %>% filter(Journal %in% app) %>%
+  mutate(Journal=factor(Journal, levels=app), Specification=factor(spec.single[spec], levels=spec.single)) %>%
+  arrange(method, Journal, Specification, cutoff) %>%
+  transmute(Method=method, Journal, Specification,
+            `Cutoff c (published ≥ c)`=paste0(cutoff, case_when(type=="actual" ~ " (actual)", type=="actual (matched window)" ~ " (actual, matched window)", TRUE ~ " (placebo)")),
+            Sample=paste0(first_year, "–", last_year), n, Clusters=n_clusters,
+            `Mean before`=num(100*mean_pre), Estimate=sgn(100*estimate),
+            `95% CI`=ci(100*lo, 100*hi), p=pv(p)) %>%
+  kable(align="llllllrrrrrr")
+```
+:::

@@ -132,17 +132,17 @@ select: dropped 8 variables (title, year, Journal, container.title, volume, …)
 +          # print month (Crossref print dates are the first of the month); year corrected in 04_combine.R
 +          pub_month = as.integer(substr(published.print,6,7))) %>%
 +   select(-m)
-filter: removed 479 rows (4%), 10,855 rows remaining
+filter: removed 477 rows (4%), 10,609 rows remaining
 left_join: added one column (published.print)
            > rows only in x               0
-           > rows only in pub.dates (   479)
-           > matched rows            10,855
+           > rows only in pub.dates (   477)
+           > matched rows            10,609
            >                        ========
-           > rows total              10,855
-mutate: new variable 'm' (character) with 19,300 unique values and 56% NA
-        new variable 'prefix' (character) with 10 unique values and 56% NA
-        new variable 'sub_year' (integer) with 19 unique values and 56% NA
-        new variable 'seq' (integer) with 1,520 unique values and 56% NA
+           > rows total              10,609
+mutate: new variable 'm' (character) with 19,056 unique values and 55% NA
+        new variable 'prefix' (character) with 10 unique values and 55% NA
+        new variable 'sub_year' (integer) with 19 unique values and 55% NA
+        new variable 'seq' (integer) with 1,503 unique values and 55% NA
         new variable 'pub_month' (integer) with 12 unique values and 0% NA
 select: dropped one variable (m)
 > 
@@ -153,7 +153,7 @@ select: dropped one variable (m)
 +   filter(prefix %in% names(ttp.prefixes), Journal %in% ttp.prefixes,
 +          # a few malformed DOIs (e.g., aer.15000001) are not manuscript numbers
 +          between(sub_year,2000,year))
-filter: removed 7,279 rows (67%), 3,576 rows remaining
+filter: removed 7,093 rows (67%), 3,516 rows remaining
 > 
 > first.ms <- ms %>% group_by(Journal) %>%
 +   summarize(first_ms_year=min(year),.groups="drop") %>%
@@ -164,7 +164,7 @@ filter: removed 7,279 rows (67%), 3,576 rows remaining
 +   mutate(left_bound=if_else(first_year < first_ms_year,first_ms_year,NA_integer_))
 group_by: one grouping variable (Journal)
 summarize: now 6 rows and 2 columns, ungrouped
-filter: removed 4,692 rows (43%), 6,163 rows remaining
+filter: removed 4,671 rows (44%), 5,938 rows remaining
 group_by: one grouping variable (Journal)
 summarize: now 6 rows and 2 columns, ungrouped
 left_join: added one column (first_year)
@@ -198,9 +198,9 @@ select: dropped 2 variables (first_ms_year, first_year)
 left_join: added one column (left_bound)
            > rows only in x                              0
            > rows only in first.ms %>% select(Jou.. (    0)
-           > matched rows                            3,576
+           > matched rows                            3,516
            >                                        =======
-           > rows total                              3,576
+           > rows total                              3,516
 mutate: new variable 'lag' (double) with 8 unique values and 0% NA
 > 
 > lag.dist <- ms %>%
@@ -209,7 +209,7 @@ mutate: new variable 'lag' (double) with 8 unique values and 0% NA
 +   count(Journal,lag) %>%
 +   group_by(Journal) %>% mutate(p=n/sum(n)) %>% ungroup() %>%
 +   complete(Journal,lag=0:ttp.max.lag,fill=list(n=0L,p=0))
-filter: removed 2,268 rows (63%), 1,308 rows remaining
+filter: removed 2,239 rows (64%), 1,277 rows remaining
 count: now 39 rows and 3 columns, ungrouped
 group_by: one grouping variable (Journal)
 mutate (grouped): new variable 'p' (double) with 34 unique values and 0% NA
@@ -250,26 +250,26 @@ mutate: new variable 'mapped' (logical) with 2 unique values and 0% NA
  5 AEJ:Applied Economics     2016       47       2015  1       TRUE  
  6 AEJ:Applied Economics     2017       59       2015  1       TRUE  
  7 AEJ:Applied Economics     2018       50       2015  1       TRUE  
- 8 AEJ:Applied Economics     2019       47       2015  0.995   TRUE  
- 9 AEJ:Applied Economics     2020       51       2015  0.990   TRUE  
-10 AEJ:Applied Economics     2021       64       2015  0.986   TRUE  
+ 8 AEJ:Applied Economics     2019       46       2015  0.995   TRUE  
+ 9 AEJ:Applied Economics     2020       50       2015  0.990   TRUE  
+10 AEJ:Applied Economics     2021       63       2015  0.986   TRUE  
 11 AEJ:Applied Economics     2022       50       2015  0.937   TRUE  
 12 AEJ:Applied Economics     2023       26       2015  0.734   FALSE 
 13 AEJ:Applied Economics     2024        1       2015  0.217   FALSE 
-14 AEJ:Economic Policy       2011        1       2015  0.137   FALSE 
-15 AEJ:Economic Policy       2012       16       2015  0.398   FALSE 
-16 AEJ:Economic Policy       2013       39       2015  0.867   TRUE  
+14 AEJ:Economic Policy       2011        1       2015  0.138   FALSE 
+15 AEJ:Economic Policy       2012       16       2015  0.4     FALSE 
+16 AEJ:Economic Policy       2013       39       2015  0.871   TRUE  
 17 AEJ:Economic Policy       2014       41       2015  1       TRUE  
 18 AEJ:Economic Policy       2015       64       2015  1       TRUE  
 19 AEJ:Economic Policy       2016       42       2015  1       TRUE  
 20 AEJ:Economic Policy       2017       59       2015  1       TRUE  
-21 AEJ:Economic Policy       2018       61       2015  1       TRUE  
+21 AEJ:Economic Policy       2018       60       2015  1       TRUE  
 22 AEJ:Economic Policy       2019       48       2015  0.996   TRUE  
-23 AEJ:Economic Policy       2020       81       2015  0.991   TRUE  
+23 AEJ:Economic Policy       2020       80       2015  0.991   TRUE  
 24 AEJ:Economic Policy       2021       54       2015  0.978   TRUE  
-25 AEJ:Economic Policy       2022       57       2015  0.863   TRUE  
-26 AEJ:Economic Policy       2023       32       2015  0.602   FALSE 
-27 AEJ:Economic Policy       2024        3       2015  0.133   FALSE 
+25 AEJ:Economic Policy       2022       57       2015  0.862   TRUE  
+26 AEJ:Economic Policy       2023       32       2015  0.6     FALSE 
+27 AEJ:Economic Policy       2024        3       2015  0.129   FALSE 
 28 AEJ:Macro                 2011        2       2015  0.228   FALSE 
 29 AEJ:Macro                 2012       10       2015  0.533   FALSE 
 30 AEJ:Macro                 2013       30       2015  0.911   TRUE  
@@ -284,37 +284,37 @@ mutate: new variable 'mapped' (logical) with 2 unique values and 0% NA
 39 AEJ:Macro                 2022       41       2015  0.772   FALSE 
 40 AEJ:Macro                 2023        6       2015  0.467   FALSE 
 41 AEJ:Macro                 2024        1       2015  0.0889  FALSE 
-42 AEJ:Micro                 2010        2       2015  0.0345  FALSE 
-43 AEJ:Micro                 2011        2       2015  0.108   FALSE 
-44 AEJ:Micro                 2012        6       2015  0.394   FALSE 
-45 AEJ:Micro                 2013       38       2015  0.862   TRUE  
+42 AEJ:Micro                 2010        2       2015  0.0347  FALSE 
+43 AEJ:Micro                 2011        2       2015  0.109   FALSE 
+44 AEJ:Micro                 2012        6       2015  0.396   FALSE 
+45 AEJ:Micro                 2013       38       2015  0.861   TRUE  
 46 AEJ:Micro                 2014       40       2015  0.995   TRUE  
 47 AEJ:Micro                 2015       48       2015  1       TRUE  
-48 AEJ:Micro                 2016       50       2015  1       TRUE  
+48 AEJ:Micro                 2016       49       2015  1       TRUE  
 49 AEJ:Micro                 2017       47       2015  1       TRUE  
 50 AEJ:Micro                 2018       58       2015  1       TRUE  
-51 AEJ:Micro                 2019       57       2015  0.995   TRUE  
+51 AEJ:Micro                 2019       56       2015  0.995   TRUE  
 52 AEJ:Micro                 2020       73       2015  0.990   TRUE  
-53 AEJ:Micro                 2021       50       2015  0.966   TRUE  
-54 AEJ:Micro                 2022       45       2015  0.892   TRUE  
-55 AEJ:Micro                 2023       23       2015  0.606   FALSE 
-56 AEJ:Micro                 2024       10       2015  0.138   FALSE 
-57 AER                       2008        1       2015  0.00862 FALSE 
-58 AER                       2010        4       2015  0.0582  FALSE 
-59 AER                       2011       19       2015  0.136   FALSE 
-60 AER                       2012       50       2015  0.349   FALSE 
-61 AER                       2013       98       2015  0.765   FALSE 
-62 AER                       2014      106       2015  0.983   TRUE  
-63 AER                       2015      124       2015  1       TRUE  
-64 AER                       2016      111       2015  1       TRUE  
-65 AER                       2017      110       2015  1       TRUE  
-66 AER                       2018      119       2015  1       TRUE  
-67 AER                       2019      109       2015  0.991   TRUE  
-68 AER                       2020      113       2015  0.968   TRUE  
-69 AER                       2021      105       2015  0.942   TRUE  
-70 AER                       2022       86       2015  0.864   TRUE  
-71 AER                       2023       77       2015  0.651   FALSE 
-72 AER                       2024       16       2015  0.235   FALSE 
+53 AEJ:Micro                 2021       50       2015  0.965   TRUE  
+54 AEJ:Micro                 2022       45       2015  0.891   TRUE  
+55 AEJ:Micro                 2023       23       2015  0.604   FALSE 
+56 AEJ:Micro                 2024       10       2015  0.139   FALSE 
+57 AER                       2008        1       2015  0.00920 FALSE 
+58 AER                       2010        3       2015  0.0621  FALSE 
+59 AER                       2011       19       2015  0.145   FALSE 
+60 AER                       2012       48       2015  0.370   FALSE 
+61 AER                       2013       93       2015  0.791   FALSE 
+62 AER                       2014      102       2015  0.993   TRUE  
+63 AER                       2015      118       2015  1       TRUE  
+64 AER                       2016      101       2015  1       TRUE  
+65 AER                       2017      104       2015  1       TRUE  
+66 AER                       2018      112       2015  1       TRUE  
+67 AER                       2019      105       2015  0.991   TRUE  
+68 AER                       2020      110       2015  0.966   TRUE  
+69 AER                       2021      104       2015  0.938   TRUE  
+70 AER                       2022       84       2015  0.855   TRUE  
+71 AER                       2023       75       2015  0.630   FALSE 
+72 AER                       2024       16       2015  0.209   FALSE 
 73 AER:Insights              2017        2         NA  1       FALSE 
 74 AER:Insights              2018       26         NA  1       TRUE  
 75 AER:Insights              2019       31         NA  1       TRUE  
@@ -341,15 +341,15 @@ select: dropped 3 variables (articles, left_bound, coverage)
 left_join: added one column (mapped)
            > rows only in x                              0
            > rows only in cohorts %>% select(Jour.. (    0)
-           > matched rows                            3,576
+           > matched rows                            3,516
            >                                        =======
-           > rows total                              3,576
+           > rows total                              3,516
 group_by: 2 grouping variables (Journal, sub_year)
 mutate (grouped): new variable 'sub_quarter' (integer) with 5 unique values and 14% NA
 ungroup: no grouping variables remain
 mutate: new variable 'sub_time' (double) with 45 unique values and 14% NA
         new variable 'pub_time' (double) with 132 unique values and 0% NA
-        new variable 'months_to_pub' (double) with 79 unique values and 14% NA
+        new variable 'months_to_pub' (double) with 76 unique values and 14% NA
 > 
 > # Publication years: analyzed only if (nearly) all of their articles come from mapped cohorts
 > pubyears <- ms %>% group_by(Journal,year) %>%
@@ -369,7 +369,7 @@ mutate: new variable 'analyzed' (logical) with 2 unique values and 0% NA
  5 AEJ:Applied Economics  2019       46     46        1     TRUE    
  6 AEJ:Applied Economics  2020       43     43        1     TRUE    
  7 AEJ:Applied Economics  2021       37     37        1     TRUE    
- 8 AEJ:Applied Economics  2022       58     58        1     TRUE    
+ 8 AEJ:Applied Economics  2022       55     55        1     TRUE    
  9 AEJ:Applied Economics  2023       56     56        1     TRUE    
 10 AEJ:Applied Economics  2024       64     61        0.953 TRUE    
 11 AEJ:Applied Economics  2025       44     20        0.455 FALSE   
@@ -377,10 +377,10 @@ mutate: new variable 'analyzed' (logical) with 2 unique values and 0% NA
 13 AEJ:Economic Policy    2016       39     37        0.949 TRUE    
 14 AEJ:Economic Policy    2017       51     51        1     TRUE    
 15 AEJ:Economic Policy    2018       48     48        1     TRUE    
-16 AEJ:Economic Policy    2019       53     53        1     TRUE    
+16 AEJ:Economic Policy    2019       52     52        1     TRUE    
 17 AEJ:Economic Policy    2020       51     51        1     TRUE    
 18 AEJ:Economic Policy    2021       57     57        1     TRUE    
-19 AEJ:Economic Policy    2022       64     64        1     TRUE    
+19 AEJ:Economic Policy    2022       63     63        1     TRUE    
 20 AEJ:Economic Policy    2023       64     64        1     TRUE    
 21 AEJ:Economic Policy    2024       64     59        0.922 TRUE    
 22 AEJ:Economic Policy    2025       61     31        0.508 FALSE   
@@ -398,25 +398,25 @@ mutate: new variable 'analyzed' (logical) with 2 unique values and 0% NA
 34 AEJ:Micro              2015       48     39        0.812 FALSE   
 35 AEJ:Micro              2016       43     42        0.977 TRUE    
 36 AEJ:Micro              2017       43     43        1     TRUE    
-37 AEJ:Micro              2018       40     40        1     TRUE    
+37 AEJ:Micro              2018       39     39        1     TRUE    
 38 AEJ:Micro              2019       38     38        1     TRUE    
 39 AEJ:Micro              2020       33     33        1     TRUE    
 40 AEJ:Micro              2021       56     56        1     TRUE    
-41 AEJ:Micro              2022       82     82        1     TRUE    
+41 AEJ:Micro              2022       81     81        1     TRUE    
 42 AEJ:Micro              2023       66     66        1     TRUE    
 43 AEJ:Micro              2024       52     47        0.904 TRUE    
 44 AEJ:Micro              2025       48     20        0.417 FALSE   
-45 AER                    2015      114     13        0.114 FALSE   
-46 AER                    2016      124     78        0.629 FALSE   
-47 AER                    2017      119    100        0.840 FALSE   
-48 AER                    2018      111    106        0.955 TRUE    
-49 AER                    2019      123    122        0.992 TRUE    
-50 AER                    2020      114    114        1     TRUE    
-51 AER                    2021      113    113        1     TRUE    
-52 AER                    2022      113    113        1     TRUE    
-53 AER                    2023       92     90        0.978 TRUE    
+45 AER                    2015      110     12        0.109 FALSE   
+46 AER                    2016      112     71        0.634 FALSE   
+47 AER                    2017      111     92        0.829 FALSE   
+48 AER                    2018      102     97        0.951 TRUE    
+49 AER                    2019      117    116        0.991 TRUE    
+50 AER                    2020      108    108        1     TRUE    
+51 AER                    2021      111    111        1     TRUE    
+52 AER                    2022      111    111        1     TRUE    
+53 AER                    2023       89     88        0.989 TRUE    
 54 AER                    2024      110     88        0.8   FALSE   
-55 AER                    2025      115     46        0.4   FALSE   
+55 AER                    2025      114     46        0.404 FALSE   
 56 AER:Insights           2019       24     22        0.917 TRUE    
 57 AER:Insights           2020       32     32        1     TRUE    
 58 AER:Insights           2021       32     32        1     TRUE    
@@ -435,12 +435,12 @@ mutate: new variable 'analyzed' (logical) with 2 unique values and 0% NA
 +                           levels=c(paste0("Published before ",ttp.policy.year),paste0("Published ",ttp.policy.year," and later"))))
 filter: removed 16 rows (26%), 46 rows remaining
 semi_join: added no columns
-           > rows only in x                         (1,061)
+           > rows only in x                         (1,036)
            > rows only in pubyears %>% filter(ana.. (    0)
-           > matched rows                            2,515
+           > matched rows                            2,480
            >                                        =======
-           > rows total                              2,515
-filter: removed 33 rows (1%), 2,482 rows remaining
+           > rows total                              2,480
+filter: removed 32 rows (1%), 2,448 rows remaining
 mutate: converted 'Journal' from character to factor (0 new NA)
         converted 'period' from character to factor (0 new NA)
         new variable 'post' (logical) with 2 unique values and 0% NA
@@ -450,7 +450,7 @@ mutate: converted 'Journal' from character to factor (0 new NA)
 +   mutate(months_to_pub=round(months_to_pub,1)) %>%
 +   write_csv(ttp.articles.csv)
 select: dropped 16 variables (Journal.published, pp_in_aer, volume, issue, page, …)
-mutate: changed 1,335 values (54%) of 'months_to_pub' (0 new NAs)
+mutate: changed 1,310 values (54%) of 'months_to_pub' (0 new NAs)
 > 
 > # ===========================
 > # Tests: is there a shift after the policy?
@@ -498,7 +498,7 @@ group_by: one grouping variable (Journal)
 ungroup: no grouping variables remain
 mutate: new variable 'cutoff' (integer) with one unique value and 0% NA
 group_by: one grouping variable (cutoff)
-mutate (grouped): new variable 'p_wilcox_holm' (double) with 12 unique values and 8% NA
+mutate (grouped): new variable 'p_wilcox_holm' (double) with 11 unique values and 8% NA
                   new variable 'p_ks_holm' (double) with 11 unique values and 8% NA
                   new variable 'significant' (logical) with 2 unique values and 0% NA
 ungroup: no grouping variables remain
@@ -508,46 +508,46 @@ relocate: columns reordered (Journal, cutoff, n_pre, n_post, first_year, …)
 # A tibble: 12 × 21
    Journal               cutoff n_pre n_post first_year last_year median_pre
    <fct>                  <int> <int>  <int>      <dbl>     <dbl>      <dbl>
- 1 AER                     2019   106    552       2018      2023       26.0
+ 1 AER                     2019    97    534       2018      2023       26.0
  2 AER:Insights            2019     0    186         NA        NA       NA  
- 3 AEJ:Applied Economics   2019    85    301       2017      2024       20.0
- 4 AEJ:Economic Policy     2019   136    348       2016      2024       24  
+ 3 AEJ:Applied Economics   2019    85    298       2017      2024       20.0
+ 4 AEJ:Economic Policy     2019   136    346       2016      2024       24  
  5 AEJ:Macro               2019    91    230       2016      2023       26.0
- 6 AEJ:Micro               2019   125    322       2016      2024       24  
- 7 AER                     2020   228    430       2018      2023       25.0
+ 6 AEJ:Micro               2019   124    321       2016      2024       24  
+ 7 AER                     2020   213    418       2018      2023       26.0
  8 AER:Insights            2020    22    164       2019      2024       16.0
- 9 AEJ:Applied Economics   2020   131    255       2017      2024       23.0
-10 AEJ:Economic Policy     2020   189    295       2016      2024       24  
+ 9 AEJ:Applied Economics   2020   131    252       2017      2024       23.0
+10 AEJ:Economic Policy     2020   188    294       2016      2024       24  
 11 AEJ:Macro               2020   131    190       2016      2023       26.0
-12 AEJ:Micro               2020   163    284       2016      2024       24  
+12 AEJ:Micro               2020   162    283       2016      2024       24  
    median_post      shift   shift_lo shift_hi mean_pre mean_post mean_diff
          <dbl>      <dbl>      <dbl>    <dbl>    <dbl>     <dbl>     <dbl>
- 1        25.0 -1.00      -3.00          2.00     27.9      27.6    -0.272
- 2        16.0 NA         NA            NA        NA        NA      NA    
- 3        26.0  6.00       3.00          6.00     22.0      27.8     5.79 
- 4        30    3.00       3.00          6.00     26.9      30.7     3.78 
- 5        32.0  6.00       3.00          9.00     26.9      33.8     6.88 
- 6        30    6.00       6.00          9.00     24.5      30.7     6.17 
- 7        25.0 -0.0000168 -2.00          2.00     27.4      27.8     0.396
- 8        16.0  0.0000694 -0.0000105     3.00     15.3      15.9     0.609
- 9        26.0  6.00       3.00          6.00     22.8      28.4     5.59 
-10        30    6.00       3.00          6.00     27.0      31.3     4.26 
-11        32.0  6.00       3.00          9.00     27.6      34.8     7.18 
-12        30    6.00       6.00          6.00     24.9      31.3     6.42 
+ 1        25.0 -2.00      -4.00          1.00     29.0      28.0   -1.04  
+ 2        16.0 NA         NA            NA        NA        NA     NA     
+ 3        26.0  6.00       3.00          6.00     22.0      27.8    5.86  
+ 4        30    3.00       3.00          6.00     26.9      30.7    3.81  
+ 5        32.0  6.00       3.00          9.00     26.9      33.8    6.88  
+ 6        30    6.00       6.00          6.00     24.5      30.7    6.12  
+ 7        25.0 -1.00      -2.00          1.00     28.2      28.1   -0.0633
+ 8        16.0  0.0000694 -0.0000105     3.00     15.3      15.9    0.609 
+ 9        26.0  6.00       3.00          6.00     22.8      28.5    5.68  
+10        30    6.00       3.00          6.00     27.1      31.3    4.18  
+11        32.0  6.00       3.00          9.00     27.6      34.8    7.18  
+12        30    6.00       6.00          6.00     24.9      31.3    6.38  
    mean_diff_lo mean_diff_hi  p_wilcox      p_ks p_wilcox_holm p_ks_holm
           <dbl>        <dbl>     <dbl>     <dbl>         <dbl>     <dbl>
- 1       -2.76          2.22  4.79e- 1  8.23e- 1      4.79e- 1  8.23e- 1
+ 1       -3.57          1.49  1.98e- 1  3.53e- 1      1.98e- 1  3.53e- 1
  2       NA            NA    NA        NA            NA        NA       
- 3        4.04          7.54  2.06e-10  9.03e- 7      8.25e-10  3.61e- 6
- 4        2.04          5.52  6.62e- 6  3.89e- 6      1.32e- 5  1.17e- 5
+ 3        4.10          7.61  1.51e-10  9.56e- 7      6.05e-10  3.83e- 6
+ 4        2.07          5.55  5.12e- 6  2.59e- 6      1.02e- 5  7.76e- 6
  5        4.42          9.33  7.35e- 7  9.24e- 6      2.21e- 6  1.85e- 5
- 6        4.55          7.79  8.95e-15  1.68e-13      4.48e-14  8.41e-13
- 7       -1.58          2.37  9.39e- 1  9.68e- 1      9.39e- 1  1   e+ 0
+ 6        4.49          7.75  1.80e-14  3.46e-13      9.01e-14  1.73e-12
+ 7       -2.07          1.94  5.85e- 1  7.87e- 1      6.92e- 1  1   e+ 0
  8       -0.616         1.83  3.46e- 1  6.08e- 1      6.92e- 1  1   e+ 0
- 9        4.06          7.12  3.88e-12  7.40e- 9      1.94e-11  2.96e- 8
-10        2.59          5.92  3.47e- 9  9.34e-10      1.39e- 8  4.67e- 9
+ 9        4.15          7.21  2.39e-12  7.87e- 9      1.20e-11  3.15e- 8
+10        2.51          5.84  5.62e- 9  1.01e- 9      2.25e- 8  5.05e- 9
 11        4.75          9.60  1.80e- 8  1.63e- 6      5.40e- 8  4.89e- 6
-12        4.93          7.91  2.11e-17  1.67e-15      1.26e-16  1.00e-14
+12        4.89          7.88  4.29e-17  3.13e-15      2.57e-16  1.88e-14
    significant
    <lgl>      
  1 FALSE      
@@ -746,7 +746,7 @@ mutate: new variable 'shift' (double) with one unique value and 0% NA
         new variable 'p_wilcox' (double) with one unique value and 0% NA
 ungroup: no grouping variables remain
 group_by: 2 grouping variables (period, pooled)
-mutate (grouped): new variable 'p_wilcox_holm' (double) with 17 unique values and 5% NA
+mutate (grouped): new variable 'p_wilcox_holm' (double) with 16 unique values and 5% NA
 ungroup: no grouping variables remain
 select: dropped one variable (pooled)
 mutate: converted 'Journal' from character to factor (0 new NA)
@@ -757,92 +757,92 @@ mutate: converted 'Journal' from character to factor (0 new NA)
 # A tibble: 20 × 17
    Journal               period                   n_package n_no_package
    <fct>                 <fct>                        <int>        <int>
- 1 AER                   All years                      531          127
- 2 AER                   Published before 2019           88           18
- 3 AER                   Published 2019 and later       443          109
+ 1 AER                   All years                      516          115
+ 2 AER                   Published before 2019           84           13
+ 3 AER                   Published 2019 and later       432          102
  4 AER:Insights          All years                      141           45
  5 AER:Insights          Published 2019 and later       141           45
- 6 AEJ:Applied Economics All years                      367           19
+ 6 AEJ:Applied Economics All years                      366           17
  7 AEJ:Applied Economics Published before 2019           84            1
- 8 AEJ:Applied Economics Published 2019 and later       283           18
- 9 AEJ:Economic Policy   All years                      450           34
+ 8 AEJ:Applied Economics Published 2019 and later       282           16
+ 9 AEJ:Economic Policy   All years                      448           34
 10 AEJ:Economic Policy   Published before 2019          128            8
-11 AEJ:Economic Policy   Published 2019 and later       322           26
+11 AEJ:Economic Policy   Published 2019 and later       320           26
 12 AEJ:Macro             All years                      277           44
 13 AEJ:Macro             Published before 2019           82            9
 14 AEJ:Macro             Published 2019 and later       195           35
-15 AEJ:Micro             All years                      182          265
-16 AEJ:Micro             Published before 2019           37           88
-17 AEJ:Micro             Published 2019 and later       145          177
-18 All journals          All years                     1948          534
-19 All journals          Published before 2019          419          124
-20 All journals          Published 2019 and later      1529          410
+15 AEJ:Micro             All years                      182          263
+16 AEJ:Micro             Published before 2019           37           87
+17 AEJ:Micro             Published 2019 and later       145          176
+18 All journals          All years                     1930          518
+19 All journals          Published before 2019          415          118
+20 All journals          Published 2019 and later      1515          400
    median_package median_no_package mean_package mean_no_package       shift
             <dbl>             <dbl>        <dbl>           <dbl>       <dbl>
- 1           26.0              20.0         28.9            22.5  6.00      
- 2           27                20.5         29.2            21.3  7.00      
- 3           26.0              20.0         28.8            22.7  6.00      
+ 1           26.0              21           29.2            23.6  5.00      
+ 2           27                22.0         29.8            24.3  5.00      
+ 3           26.0              21           29.1            23.5  5.00      
  4           16.0              13.0         16.3            14.4  3.00      
  5           16.0              13.0         16.3            14.4  3.00      
- 6           26.0              29.0         26.3            30.9 -3.00      
+ 6           26.0              29.0         26.3            31.1 -6.00      
  7           21.5              11.0         22.1            11.0 NA         
- 8           26.0              29.0         27.5            32.0 -3.00      
- 9           27                27           29.7            28.6 -0.0000354 
+ 8           26.0              30.5         27.6            32.4 -3.00      
+ 9           27                27           29.7            28.6 -0.0000351 
 10           24                28.5         26.8            28.1 -3.00      
-11           30                27           30.8            28.7  0.0000324 
+11           30                27           30.9            28.7  0.0000126 
 12           29.0              29.0         31.9            31.8 -0.00000232
 13           26.0              26.0         26.4            31.7 -3.00      
 14           32.0              29.0         34.2            31.8  3.00      
 15           30                27           30.9            27.6  3.00      
-16           24                24           24.9            24.3  0.0000224 
+16           24                24           24.9            24.4  0.0000620 
 17           30                30           32.4            29.2  3.00      
-18           26.0              26.0         28.3            25.8  2.00      
-19           24                24           26.1            24.6  1.00      
-20           27                27           28.9            26.2  2.00      
-      shift_lo   shift_hi mean_diff mean_diff_lo mean_diff_hi p_wilcox
-         <dbl>      <dbl>     <dbl>        <dbl>        <dbl>    <dbl>
- 1   4.00       8.00         6.35          4.04         8.65   7.93e-9
- 2   2.00      13.0          7.95          2.81        13.1    1.01e-2
- 3   4.00       8.00         6.07          3.50         8.64   2.17e-7
- 4   0.0000112  3.00         1.92          1.00         2.83   4.69e-5
- 5   0.0000112  3.00         1.92          1.00         2.83   4.69e-5
- 6  -9.00      -0.0000149   -4.63        -10.1          0.874  2.11e-2
- 7  NA         NA           NA            NA           NA     NA      
- 8  -6.00      -0.0000305   -4.51         -9.81         0.802  2.67e-2
- 9  -3.00       3.00         1.10         -1.06         3.26   9.82e-1
-10  -9.00       3.00        -1.31         -7.37         4.74   4.84e-1
-11  -3.00       3.00         2.10         -0.270        4.47   5.68e-1
-12  -3.00       3.00         0.0638       -3.59         3.72   9.68e-1
-13 -12.0        0.0000481   -5.26        -13.5          2.95   1.35e-1
-14  -0.0000399  6.00         2.33         -1.95         6.61   2.57e-1
-15   0.0000386  3.00         3.28          1.60         4.95   3.40e-4
-16  -3.00       3.00         0.551        -2.22         3.32   5.83e-1
-17   0.0000321  3.00         3.18          1.29         5.08   1.83e-3
-18   1.00       3.00         2.46          1.48         3.44   8.71e-5
-19  -0.0000217  3.00         1.56         -0.191        3.31   2.22e-1
-20   1.00       3.00         2.67          1.52         3.82   2.75e-4
+18           27                26.0         28.4            26.1  2.00      
+19           24                24           26.2            25.1  0.0000379 
+20           27                27           29.0            26.4  2.00      
+      shift_lo   shift_hi mean_diff mean_diff_lo mean_diff_hi     p_wilcox
+         <dbl>      <dbl>     <dbl>        <dbl>        <dbl>        <dbl>
+ 1   3.00       7.00         5.58         3.19           7.96  0.000000647
+ 2  -1.00      11.0          5.45         0.0384        10.9   0.111      
+ 3   3.00       7.00         5.55         2.93           8.17  0.00000289 
+ 4   0.0000112  3.00         1.92         1.00           2.83  0.0000469  
+ 5   0.0000112  3.00         1.92         1.00           2.83  0.0000469  
+ 6  -9.00      -0.0000295   -4.80       -11.0            1.41  0.0370     
+ 7  NA         NA           NA           NA             NA    NA          
+ 8  -9.00      -0.0000640   -4.80       -10.8            1.20  0.0391     
+ 9  -3.00       3.00         1.12        -1.04           3.27  0.986      
+10  -9.00       3.00        -1.31        -7.37           4.74  0.484      
+11  -3.00       3.00         2.13        -0.236          4.50  0.562      
+12  -3.00       3.00         0.0638      -3.59           3.72  0.968      
+13 -12.0        0.0000481   -5.26       -13.5            2.95  0.135      
+14  -0.0000399  6.00         2.33        -1.95           6.61  0.257      
+15   0.0000443  3.00         3.26         1.58           4.94  0.000368   
+16  -3.00       3.00         0.513       -2.27           3.29  0.603      
+17   0.0000527  3.00         3.18         1.29           5.08  0.00174    
+18   1.00       3.00         2.25         1.27           3.23  0.000417   
+19  -1.00       2.00         1.14        -0.614          2.89  0.426      
+20   1.00       3.00         2.54         1.38           3.69  0.000619   
    p_wilcox_holm significant
            <dbl> <lgl>      
- 1  0.0000000476 TRUE       
- 2  0.0404       TRUE       
- 3  0.00000130   TRUE       
- 4  0.000234     TRUE       
- 5  0.000234     TRUE       
- 6  0.0633       FALSE      
- 7 NA            FALSE      
- 8  0.0802       FALSE      
- 9  1            FALSE      
-10  0.969        FALSE      
-11  0.568        FALSE      
-12  1            FALSE      
-13  0.405        FALSE      
-14  0.515        FALSE      
-15  0.00136      TRUE       
-16  0.969        FALSE      
-17  0.00733      TRUE       
-18  0.0000871    TRUE       
-19  0.222        FALSE      
-20  0.000275     TRUE       
+ 1    0.00000388 TRUE       
+ 2    0.443      FALSE      
+ 3    0.0000173  TRUE       
+ 4    0.000234   TRUE       
+ 5    0.000234   TRUE       
+ 6    0.111      FALSE      
+ 7   NA          FALSE      
+ 8    0.117      FALSE      
+ 9    1          FALSE      
+10    0.969      FALSE      
+11    0.562      FALSE      
+12    1          FALSE      
+13    0.443      FALSE      
+14    0.515      FALSE      
+15    0.00147    TRUE       
+16    0.969      FALSE      
+17    0.00697    TRUE       
+18    0.000417   TRUE       
+19    0.426      FALSE      
+20    0.000619   TRUE       
 > write_csv(by.package,ttp.package.csv)
 > 
 > # ===========================
@@ -929,7 +929,7 @@ mutate: new variable 'comparison' (character) with one unique value and 0% NA
         new variable 'period' (character) with one unique value and 0% NA
         new variable 'group1' (character) with one unique value and 0% NA
         new variable 'group2' (character) with one unique value and 0% NA
-mutate: changed 4,964 values (100%) of 'period' (0 new NAs)
+mutate: changed 4,896 values (100%) of 'period' (0 new NAs)
 group_by: 2 grouping variables (Journal, period)
 mutate: new variable 'n_eff' (double) with one unique value and 0% NA
         new variable 'D' (double) with one unique value and 0% NA
@@ -1071,62 +1071,62 @@ relocate: columns reordered (comparison, Journal, period, group1, group2, …)
 27 With vs without a package      All journals          Published before 2019   
    group1                group2                      n1    n2  n_eff       D
    <chr>                 <chr>                    <int> <int>  <dbl>   <dbl>
- 1 Published before 2019 Published 2019 and later   106   552  88.9   0.0668
+ 1 Published before 2019 Published 2019 and later    97   534  82.1   0.103 
  2 Published before 2019 Published 2019 and later     0   186  NA    NA     
- 3 Published before 2019 Published 2019 and later    85   301  66.3   0.332 
- 4 Published before 2019 Published 2019 and later   136   348  97.8   0.259 
+ 3 Published before 2019 Published 2019 and later    85   298  66.1   0.332 
+ 4 Published before 2019 Published 2019 and later   136   346  97.6   0.264 
  5 Published before 2019 Published 2019 and later    91   230  65.2   0.307 
- 6 Published before 2019 Published 2019 and later   125   322  90.0   0.409 
- 7 Published before 2019 Published 2019 and later   543  1939 424.    0.153 
- 8 With a package        Without                    531   127 102.    0.249 
- 9 With a package        Without                    443   109  87.5   0.243 
-10 With a package        Without                     88    18  14.9   0.360 
+ 6 Published before 2019 Published 2019 and later   124   321  89.4   0.405 
+ 7 Published before 2019 Published 2019 and later   533  1915 417.    0.152 
+ 8 With a package        Without                    516   115  94.0   0.230 
+ 9 With a package        Without                    432   102  82.5   0.221 
+10 With a package        Without                     84    13  11.3   0.299 
 11 With a package        Without                    141    45  34.1   0.322 
 12 With a package        Without                    141    45  34.1   0.322 
-13 With a package        Without                    367    19  18.1   0.292 
-14 With a package        Without                    283    18  16.9   0.267 
+13 With a package        Without                    366    17  16.2   0.272 
+14 With a package        Without                    282    16  15.1   0.251 
 15 With a package        Without                     84     1  NA    NA     
-16 With a package        Without                    450    34  31.6   0.147 
-17 With a package        Without                    322    26  24.1   0.164 
+16 With a package        Without                    448    34  31.6   0.145 
+17 With a package        Without                    320    26  24.0   0.166 
 18 With a package        Without                    128     8   7.53  0.164 
 19 With a package        Without                    277    44  38.0   0.137 
 20 With a package        Without                    195    35  29.7   0.231 
 21 With a package        Without                     82     9   8.11  0.248 
-22 With a package        Without                    182   265 108.    0.156 
-23 With a package        Without                    145   177  79.7   0.186 
-24 With a package        Without                     37    88  26.0   0.0759
-25 With a package        Without                   1948   534 419.    0.113 
-26 With a package        Without                   1529   410 323.    0.129 
-27 With a package        Without                    419   124  95.7   0.100 
+22 With a package        Without                    182   263 108.    0.158 
+23 With a package        Without                    145   176  79.5   0.191 
+24 With a package        Without                     37    87  26.0   0.0721
+25 With a package        Without                   1930   518 408.    0.110 
+26 With a package        Without                   1515   400 316.    0.128 
+27 With a package        Without                    415   118  91.9   0.0837
    D_crit_5 p_asymptotic p_permutation p_permutation_holm significant
       <dbl>        <dbl>         <dbl>              <dbl> <lgl>      
- 1   0.144      8.23e- 1      0.677              0.677    FALSE      
+ 1   0.150      3.53e- 1      0.235              0.235    FALSE      
  2  NA         NA            NA                 NA        FALSE      
- 3   0.167      9.03e- 7      0.000100           0.000500 TRUE       
- 4   0.137      3.89e- 6      0.000100           0.000500 TRUE       
+ 3   0.167      9.56e- 7      0.000100           0.000500 TRUE       
+ 4   0.137      2.59e- 6      0.000100           0.000500 TRUE       
  5   0.168      9.24e- 6      0.000100           0.000500 TRUE       
- 6   0.143      1.68e-13      0.000100           0.000500 TRUE       
- 7   0.0659     4.22e- 9      0.000100           0.000100 TRUE       
- 8   0.134      5.75e- 6      0.000100           0.000600 TRUE       
- 9   0.145      6.46e- 5      0.000100           0.000600 TRUE       
-10   0.351      4.17e- 2      0.0227             0.0908   FALSE      
-11   0.233      1.73e- 3      0.000200           0.00100  TRUE       
+ 6   0.144      3.46e-13      0.000100           0.000500 TRUE       
+ 7   0.0665     7.96e- 9      0.000100           0.000100 TRUE       
+ 8   0.140      9.89e- 5      0.000100           0.000600 TRUE       
+ 9   0.149      6.32e- 4      0.000300           0.00150  TRUE       
+10   0.405      2.68e- 1      0.178              0.713    FALSE      
+11   0.233      1.73e- 3      0.000300           0.00150  TRUE       
 12   0.233      1.73e- 3      0.000100           0.000600 TRUE       
-13   0.320      9.24e- 2      0.0291             0.0873   FALSE      
-14   0.330      1.79e- 1      0.0559             0.114    FALSE      
+13   0.337      1.82e- 1      0.0764             0.229    FALSE      
+14   0.349      2.96e- 1      0.142              0.283    FALSE      
 15  NA         NA            NA                 NA        FALSE      
-16   0.242      4.98e- 1      0.254              0.456    FALSE      
-17   0.277      5.36e- 1      0.279              0.279    FALSE      
-18   0.495      9.87e- 1      0.791              1        FALSE      
-19   0.220      4.71e- 1      0.228              0.456    FALSE      
-20   0.249      8.48e- 2      0.0381             0.114    FALSE      
-21   0.477      7.01e- 1      0.398              1        FALSE      
-22   0.131      1.06e- 2      0.00230            0.00920  TRUE       
-23   0.152      7.83e- 3      0.00120            0.00480  TRUE       
-24   0.266      9.98e- 1      0.899              1        FALSE      
-25   0.0663     4.71e- 5      0.000100           0.000100 TRUE       
-26   0.0755     4.20e- 5      0.000100           0.000100 TRUE       
-27   0.139      2.93e- 1      0.172              0.172    FALSE      
+16   0.242      5.24e- 1      0.248              0.458    FALSE      
+17   0.277      5.23e- 1      0.251              0.283    FALSE      
+18   0.495      9.87e- 1      0.794              1        FALSE      
+19   0.220      4.71e- 1      0.229              0.458    FALSE      
+20   0.249      8.48e- 2      0.0370             0.111    FALSE      
+21   0.477      7.01e- 1      0.402              1        FALSE      
+22   0.131      9.46e- 3      0.00170            0.00680  TRUE       
+23   0.152      6.22e- 3      0.00100            0.00400  TRUE       
+24   0.267      9.99e- 1      0.924              1        FALSE      
+25   0.0672     9.39e- 5      0.000100           0.000100 TRUE       
+26   0.0763     6.73e- 5      0.000100           0.000100 TRUE       
+27   0.142      5.40e- 1      0.345              0.345    FALSE      
 > write_csv(ks.tests,ttp.ks.csv)
 > 
 > # ===========================
@@ -1182,7 +1182,7 @@ ungroup: no grouping variables remain
 > band <- ymax.dens*0.35     # height of a row of points
 > set.seed(20191001)
 > delay <- delay %>% mutate(jit=runif(n(),0.15,0.85))
-mutate: new variable 'jit' (double) with 2,482 unique values and 0% NA
+mutate: new variable 'jit' (double) with 2,448 unique values and 0% NA
 > 
 > caption.delay <- paste0(
 +   "Submission: year and manuscript number from the DOI (e.g., 10.1257/aer.20151234). Within a submission year, the quartiles of the manuscript numbers\n",
@@ -1249,7 +1249,7 @@ mutate: new variable 'sig' (logical) with 2 unique values and 0% NA
 +   left_join(delay %>% distinct(Journal,period,key),by=c("Journal","period"))
 group_by: 2 grouping variables (Journal, period)
 ungroup: no grouping variables remain
-distinct: removed 2,471 rows (>99%), 11 rows remaining
+distinct: removed 2,437 rows (>99%), 11 rows remaining
 left_join: added one column (key)
            > rows only in x                              0
            > rows only in delay %>% distinct(Jour.. (    0)
@@ -1338,37 +1338,37 @@ ungroup: no grouping variables remain
 + }
 > 
 > fig.highlight <- lapply(journal.order,fig_highlight)
-filter: removed 1,824 rows (73%), 658 rows remaining
+filter: removed 1,817 rows (74%), 631 rows remaining
 filter: removed 5 rows (83%), one row remaining
 filter: removed 512 rows (18%), 2,304 rows remaining
 filter: removed 2,304 rows (82%), 512 rows remaining
 filter: removed 9 rows (82%), 2 rows remaining
 filter: removed one row (50%), one row remaining
-filter: removed 2,296 rows (93%), 186 rows remaining
+filter: removed 2,262 rows (92%), 186 rows remaining
 filter: removed 5 rows (83%), one row remaining
 filter: removed 256 rows (9%), 2,560 rows remaining
 filter: removed 2,560 rows (91%), 256 rows remaining
 filter: removed 10 rows (91%), one row remaining
 filter: removed all rows (100%)
-filter: removed 2,096 rows (84%), 386 rows remaining
+filter: removed 2,065 rows (84%), 383 rows remaining
 filter: removed 5 rows (83%), one row remaining
 filter: removed 512 rows (18%), 2,304 rows remaining
 filter: removed 2,304 rows (82%), 512 rows remaining
 filter: removed 9 rows (82%), 2 rows remaining
 filter: removed one row (50%), one row remaining
-filter: removed 1,998 rows (80%), 484 rows remaining
+filter: removed 1,966 rows (80%), 482 rows remaining
 filter: removed 5 rows (83%), one row remaining
 filter: removed 512 rows (18%), 2,304 rows remaining
 filter: removed 2,304 rows (82%), 512 rows remaining
 filter: removed 9 rows (82%), 2 rows remaining
 filter: removed one row (50%), one row remaining
-filter: removed 2,161 rows (87%), 321 rows remaining
+filter: removed 2,127 rows (87%), 321 rows remaining
 filter: removed 5 rows (83%), one row remaining
 filter: removed 512 rows (18%), 2,304 rows remaining
 filter: removed 2,304 rows (82%), 512 rows remaining
 filter: removed 9 rows (82%), 2 rows remaining
 filter: removed one row (50%), one row remaining
-filter: removed 2,035 rows (82%), 447 rows remaining
+filter: removed 2,003 rows (82%), 445 rows remaining
 filter: removed 5 rows (83%), one row remaining
 filter: removed 512 rows (18%), 2,304 rows remaining
 filter: removed 2,304 rows (82%), 512 rows remaining
@@ -1402,7 +1402,7 @@ mutate: new variable 'view' (character) with one unique value and 0% NA
 +   left_join(cohorts %>% select(Journal,year=sub_year,coverage),by=c("Journal","year")) %>%
 +   mutate(view="submission year",complete=coverage >= 0.95) %>%
 +   select(-coverage)
-filter: removed 498 rows (14%), 3,078 rows remaining
+filter: removed 488 rows (14%), 3,028 rows remaining
 group_by: 2 grouping variables (Journal, year)
 summarize: now 53 rows and 6 columns, ungrouped
 mutate: new variable 'lo' (double) with 53 unique values and 0% NA
@@ -1423,10 +1423,10 @@ select: dropped one variable (coverage)
 +   mutate(across(c(mean,lo,hi,median),~ round(.x,1))) %>%
 +   write_csv(ttp.by.year.csv)
 select: dropped one variable (se)
-mutate: changed 93 values (94%) of 'mean' (0 new NAs)
+mutate: changed 95 values (96%) of 'mean' (0 new NAs)
         changed 99 values (100%) of 'lo' (0 new NAs)
         changed 99 values (100%) of 'hi' (0 new NAs)
-        changed 55 values (56%) of 'median' (0 new NAs)
+        changed 57 values (58%) of 'median' (0 new NAs)
 > 
 > # the method part of the caption (no points, densities, or median shifts in these figures)
 > caption.method <- paste0(sub("\nTimes fall on a grid.*$","",caption.delay),
@@ -1494,7 +1494,7 @@ rename: renamed one variable (Journal)
 > ttp.pkg <- delay %>%
 +   mutate(pkg=factor(if_else(has_package,pkg.levels[1],pkg.levels[2]),levels=pkg.levels),
 +          row=as.integer(pkg))
-mutate: changed 1,653 values (67%) of 'row' (0 new NAs)
+mutate: changed 1,633 values (67%) of 'row' (0 new NAs)
         new variable 'pkg' (factor) with 2 unique values and 0% NA
 > d.pkg <- dens_of(ttp.pkg,Journal,period,pkg)
 group_by: 3 grouping variables (Journal, period, pkg)
@@ -1539,4 +1539,4 @@ mutate: changed 0 values (0%) of 'Journal' (0 new NAs)
 > 
 > proc.time()
    user  system elapsed 
- 54.374   2.241  53.576 
+ 56.122   2.130  55.109 

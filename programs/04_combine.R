@@ -17,6 +17,16 @@ nrow(new.df)
 
 # Front matter and editorial/administrative content that is not a research article.
 # Most of these have no authors; the title patterns catch the ones that do.
+# Comments, replies and rejoinders on earlier articles, and errata/corrections: not research articles.
+# (Later comments and replies may have a replication package; a reply's is often a new version of the
+# original article's package.) AER titles end in ": Comment" / ": Reply"; JEP corrections start with "Correction".
+comment.titles <- c("[:.?!]\\s*(comment|reply|rejoinder|erratum|errata|corrigendum)s?\\s*$",
+                    "^(comment|reply|rejoinder)s?\\s*(on|to)\\b",
+                    "^corrections?( and update)?\\s*:",
+                    "^comments?\\s*(:|$)",                       # JEP letters, P&P discussants
+                    "^a comment on ", ":\\s*a comment\\b",        # "A Comment on X", "X: A Comment (on Y)"
+                    ":\\s*(comment|reply)\\s*[:\u2014\u2013-]")    # "X: Comment: subtitle", "X: Reply—..."
+
 editorial.titles <- c("^front matter$",
                       "^book reviews?$",
                       "^foreword$",
@@ -61,6 +71,8 @@ new.df %>%
                                          (is.data.frame(.x) && nrow(.x)==0)),
          editorial   = str_detect(title.clean,
                                   regex(paste(editorial.titles,collapse="|"),ignore_case=TRUE)),
+         comment     = str_detect(title.clean,
+                                  regex(paste(comment.titles,collapse="|"),ignore_case=TRUE)),
          # JEL book reviews have DOIs ending in .r1, .r2, ...
          bookreview  = str_detect(doi,"\\.r\\d+$"),
          # frontmatter DOIs end in "i"
@@ -73,6 +85,7 @@ crossref.df %>%
             frontmatter=sum(frontmatter),
             no.author=sum(no.author),
             editorial=sum(editorial),
+            comment=sum(comment),
             bookreview=sum(bookreview))
 
 crossref.df %>%
@@ -80,6 +93,7 @@ crossref.df %>%
   filter(!frontmatter) %>%
   filter(!no.author) %>%
   filter(!editorial) %>%
+  filter(!comment) %>%
   filter(!bookreview) %>%
   filter(!is.na(title)) %>%
   mutate(year = as.integer(substr(published.print,1,4)),

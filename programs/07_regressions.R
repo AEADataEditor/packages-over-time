@@ -2,6 +2,10 @@
 #   (a) the presence of replication packages (article level, linear probability model),
 #   (b) the time from submission to publication (months, articles from 06_time_to_pub.R)?
 #
+# Main specification: event studies (year dummies relative to es.ref, with no trend, linear or quadratic
+# pre-period journal trends, or rolling local trends; bootstrap over issues), written to es.csv.
+# Robustness: the static specifications below, including the actual cutoff on a matched window.
+#
 # post is defined by year of print publication. Linear trends are in publication quarter
 # (from the Crossref print date), centered on the first quarter of the cutoff year.
 #
@@ -86,12 +90,17 @@ probit_cluster <- function(formula, data, term, cluster) {
 # Samples: the actual cutoff on all years; placebo cutoffs on one side of the actual cutoff only
 cutoffs <- bind_rows(
   tibble(cutoff=reg.policy.year, type="actual"),
+  tibble(cutoff=reg.policy.year, type="actual (matched window)"),
   tibble(cutoff=reg.placebo.pre, type="placebo (before)"),
   tibble(cutoff=reg.placebo.post,type="placebo (after)"))
 
 sample_for <- function(df, type) {
   switch(type,
          "actual"           = df,
+         # the same number of years on each side of the cutoff (robustness for pooled pre/post averages)
+         "actual (matched window)" = {
+           m <- min(reg.matched.max, reg.policy.year - min(df$year), max(df$year) - reg.policy.year + 1L)
+           df %>% filter(between(year, reg.policy.year - m, reg.policy.year + m - 1L)) },
          "placebo (before)" = df %>% filter(year <  reg.policy.year),
          "placebo (after)"  = df %>% filter(year >= reg.policy.year))
 }
@@ -112,7 +121,7 @@ run_all <- function(df, specs, by.journal, outcome, estimator=ols_cluster, metho
       dd <- if (!is.null(specs[[s]]$filter)) specs[[s]]$filter(d) else d
       r <- estimator(specs[[s]]$formula, dd, specs[[s]]$term, "cl")
       if (!is.null(r)) out[[length(out)+1]] <- r %>%
-        mutate(Journal="All journals", spec=s, cutoff=c0, type=ty,
+        mutate(Journal=if (is.null(specs[[s]]$label)) main.label else specs[[s]]$label, spec=s, cutoff=c0, type=ty,
                first_year=min(dd$year), last_year=max(dd$year), mean_pre=pre.mean(dd))
     }
     for (j in sort(unique(d$Journal))) {
@@ -158,18 +167,20 @@ articles %>% count(Journal,missing_quarter=is.na(pub_quarter)) %>% print(n=Inf)
 articles <- articles %>% filter(!is.na(pub_quarter))
 
 no.insights <- function(d) d %>% filter(!Journal %in% reg.pkg.excluded)
+main.only   <- function(d) d %>% filter(Journal %in% main.journals)
+did.label   <- "DiD: P&P, JEL, JEP vs AER, AEJs"
 pkg.specs <- list(
-  its_fe    = list(formula=y ~ post + factor(Journal),                    term="post"),
-  its_trend = list(formula=y ~ post + factor(Journal) + factor(Journal):t, term="post"),
+  its_fe    = list(formula=y ~ post + factor(Journal),                    term="post", filter=main.only),
+  its_trend = list(formula=y ~ post + factor(Journal) + factor(Journal):t, term="post", filter=main.only),
   did       = list(formula=y ~ post:newly + factor(Journal) + factor(year), term="post:newly",
-                   filter=no.insights),
+                   filter=no.insights, label=did.label),
   did_trend = list(formula=y ~ post:newly + factor(Journal) + factor(year) + newly:t, term="post:newly",
-                   filter=no.insights))
+                   filter=no.insights, label=did.label))
 
 reg.pkg <- bind_rows(
   run_all(articles, pkg.specs, its.journal, "has_package", ols_cluster,    "Linear probability"),
   run_all(articles, pkg.specs, its.journal, "has_package", probit_cluster, "Probit"))
-reg.pkg %>% filter(Journal=="All journals") %>% print(n=Inf,width=Inf)
+reg.pkg %>% filter(Journal %in% c(main.label,did.label)) %>% print(n=Inf,width=Inf)
 write_csv(reg.pkg, reg.packages.csv)
 
 # ===========================
@@ -187,8 +198,109 @@ ttp.specs <- list(
   pkg       = list(formula=y ~ post*has_package + factor(Journal),          term="post:has_package"))
 
 reg.delay <- run_all(delay, ttp.specs, its.journal, "months_to_pub")
-reg.delay %>% filter(Journal=="All journals") %>% print(n=Inf,width=Inf)
+reg.delay %>% filter(Journal==main.label) %>% print(n=Inf,width=Inf)
 write_csv(reg.delay, reg.ttp.csv)
+
+# ===========================
+# Event studies (main specification)
+# ===========================
+# y = a_j + f_j(t) + sum_{k != es.ref} b_k 1(year = k) + e, main journals with years before the policy.
+# Calendar-year effects cannot be separated from b_k (all main journals are treated in 2019), so:
+#   none       f = 0: b_k is the journal-adjusted mean in year k minus that in es.ref
+#   linear     f_j linear in publication quarter, fitted on es.firstyear..es.ref and extrapolated;
+#              b_k = mean deviation from the fitted trend in year k minus that in es.ref
+#   quadratic  as linear, with a quadratic in publication quarter
+#   rolling    b_k = mean deviation in year k from the linear journal trends fitted on the es.roll
+#              years before k (a local jump; no reference year)
+# A journal enters the trend variants only with at least es.min.pre.years years in the fit window.
+# Confidence intervals: percentile bootstrap, resampling issues within journal x year.
+
+es_fit <- function(d, trend) {
+  fe   <- if (n_distinct(d$Journal) > 1) "factor(Journal)" else "1"
+  tr   <- if (n_distinct(d$Journal) > 1) "factor(Journal):t" else "t"
+  yrs  <- sort(unique(d$year)); dum <- setdiff(yrs, es.ref)
+  pre_ok <- function(dd, win) dd %>% group_by(Journal) %>%
+    filter(n_distinct(year[year %in% win]) >= es.min.pre.years) %>% ungroup()
+  if (trend == "none") {
+    X <- model.matrix(as.formula(paste("~", fe)), d)
+    for (k in dum) X <- cbind(X, as.numeric(d$year == k))
+    b <- lm.fit(X, d$y)$coefficients
+    return(tibble(year=c(es.ref, dum), estimate=c(0, tail(b, length(dum)))))
+  }
+  if (trend %in% c("linear","quadratic")) {
+    win <- es.firstyear:es.ref
+    d <- pre_ok(d, win); if (nrow(d) == 0) return(NULL)
+    f <- paste("y ~", fe, "+", tr, if (trend == "quadratic") paste0("+ ", sub(":t", ":I(t^2)", tr), "") else "")
+    if (trend == "quadratic" && tr == "t") f <- "y ~ t + I(t^2)"
+    fit <- lm(as.formula(f), data=d %>% filter(year %in% win))
+    r <- d$y - predict(fit, newdata=d)
+    m <- tapply(r, d$year, mean)
+    return(tibble(year=as.integer(names(m)), estimate=as.numeric(m - m[as.character(es.ref)])))
+  }
+  # rolling local trend
+  out <- list()
+  for (k in yrs) {
+    win <- (k - es.roll):(k - 1L)
+    dk <- d %>% filter(year %in% c(win, k)) %>% pre_ok(win) %>%
+      group_by(Journal) %>% filter(any(year == k)) %>% ungroup()
+    if (nrow(dk) == 0 || !any(dk$year %in% win)) next
+    fit <- lm(as.formula(paste("y ~", fe, "+", tr)), data=dk %>% filter(year %in% win))
+    nd <- dk %>% filter(year == k)
+    out[[length(out)+1]] <- tibble(year=k, estimate=mean(nd$y - predict(fit, newdata=nd)))
+  }
+  bind_rows(out)
+}
+
+es_run <- function(df, outcome, firstyear) {
+  df <- df %>% filter(Journal %in% setdiff(main.journals, reg.pkg.excluded), year <= lastyear) %>%
+    mutate(t=4L*(year - reg.policy.year) + (pub_quarter - 1L), strat=paste(Journal, year))
+  samples <- c(setNames(list(df), main.label), split(df, df$Journal))
+  RNGkind("L'Ecuyer-CMRG"); set.seed(20190101)
+  res <- list()
+  for (j in names(samples)) for (tr in c("none","linear","quadratic","rolling")) {
+    dj <- samples[[j]]
+    # the rolling trend needs es.roll years before es.firstyear; others start at the window
+    d0 <- if (tr == "rolling") dj else dj %>% filter(year >= firstyear)
+    est <- es_fit(d0, tr); if (is.null(est) || nrow(est) == 0) next
+    if (tr == "rolling") est <- est %>% filter(year >= firstyear)
+    # bootstrap: resample issues within journal x year
+    idx <- split(seq_len(nrow(d0)), d0$strat)
+    iss <- lapply(idx, function(i) split(i, d0$issue_id[i]))
+    boots <- parallel::mclapply(seq_len(es.boot), function(r) {
+      rows <- unlist(lapply(iss, function(g) unlist(g[sample.int(length(g), length(g), replace=TRUE)], use.names=FALSE)),
+                     use.names=FALSE)
+      b <- es_fit(d0[rows, ], tr)
+      b$estimate[match(est$year, b$year)]
+    }, mc.cores=es.cores, mc.set.seed=TRUE)
+    boots <- matrix(unlist(boots), nrow=nrow(est))
+    nyr <- d0 %>% count(year)
+    res[[length(res)+1]] <- est %>%
+      mutate(Journal=j, trend=tr,
+             se=apply(boots, 1, sd, na.rm=TRUE),
+             lo=apply(boots, 1, quantile, 0.025, na.rm=TRUE),
+             hi=apply(boots, 1, quantile, 0.975, na.rm=TRUE),
+             p=pmin(1, 2*pmin(rowMeans(boots <= 0, na.rm=TRUE), rowMeans(boots >= 0, na.rm=TRUE))),
+             mean_ref=mean(d0$y[d0$year == es.ref]),
+             journals=n_distinct(d0$Journal)) %>%
+      left_join(nyr %>% rename(n_year=n), by="year") %>%
+      mutate(across(c(se, lo, hi, p), ~ if_else(trend != "rolling" & year == es.ref, NA_real_, .x)))
+  }
+  bind_rows(res) %>% mutate(outcome=outcome) %>%
+    select(outcome, Journal, trend, year, n_year, journals, mean_ref, estimate, se, lo, hi, p) %>%
+    arrange(outcome, Journal, trend, year)
+}
+
+# tidylog would print a message for every dplyr call in every bootstrap draw
+old.tl <- options(tidylog.display=list())
+issues <- read_csv(article.db.csv, show_col_types=FALSE) %>%
+  transmute(doi, issue_id=paste(Journal, volume, issue))
+es <- bind_rows(
+  es_run(articles %>% left_join(issues %>% select(-any_of("Journal")), by="doi"), "has_package", es.firstyear),
+  es_run(delay %>% left_join(issues, by="doi") %>% mutate(issue_id=coalesce(issue_id, paste(Journal, year, pub_month))),
+         "months_to_pub", es.firstyear))
+es %>% filter(Journal == main.label) %>% print(n=Inf, width=Inf)
+write_csv(es, es.csv)
+options(old.tl)
 
 # ===========================
 # Figure: estimates at the actual and the placebo implementation years (pooled)
@@ -201,9 +313,9 @@ col.actual  <- "#C2611F"
 col.placebo <- "#2F6DB5"
 
 fig_placebo <- function(r, title, ylab, file, scale=1) {
-  df <- r %>% filter(Journal=="All journals", method %in% c("OLS","Linear probability")) %>%
+  df <- r %>% filter(Journal %in% c(main.label,did.label), method %in% c("OLS","Linear probability"), type != "actual (matched window)") %>%
     mutate(spec=factor(spec.labels[spec],levels=spec.labels),
-           kind=if_else(type=="actual","Actual (published 2019 and later)","Placebo"),
+           kind=if_else(startsWith(type,"actual"),"Actual (published 2019 and later)","Placebo"),
            across(c(estimate,lo,hi),~ .x*scale))
   p <- ggplot(df,aes(cutoff,estimate,colour=kind)) +
     geom_hline(yintercept=0,colour="grey50",linewidth=0.3) +
@@ -214,7 +326,7 @@ fig_placebo <- function(r, title, ylab, file, scale=1) {
     scale_colour_manual(values=c("Actual (published 2019 and later)"=col.actual,"Placebo"=col.placebo)) +
     scale_x_continuous(breaks=c(reg.placebo.pre,reg.policy.year,reg.placebo.post)) +
     labs(title=title,
-         subtitle=paste0("All journals pooled. OLS estimate and 95% CI (clustered by journal x year). Placebos at ",
+         subtitle=paste0("Pooled: AER, AER:Insights, AEJs (DiD: with P&P, JEL, JEP as treated). OLS estimate and 95% CI (clustered by journal x year). Placebos at ",
                          paste(reg.placebo.pre,collapse=", ")," use years before ",reg.policy.year," only;\n",
                          "placebos at ",paste(reg.placebo.post,collapse=", ")," use years from ",reg.policy.year," on only."),
          x="Cutoff year c: post = 1 if published in year c or later (actual c = 2019; others placebos)",y=ylab) +

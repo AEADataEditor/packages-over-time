@@ -125,4 +125,4 @@ html`<div class="fig-notes">
 
 - **AER:** no change in the time from submission to publication after 2019.
 - **AEJs:** times are 3–7 months longer after 2019 than before. But the increase is gradual, from 2017 to 2022, not a step at 2019. For AEJ:Applied and AEJ:Micro it starts with papers submitted in 2017. A publication backlog in 2021–22 and COVID fall in the same window. The [policy regressions](regressions.qmd) test this with placebo years.
-- **With versus without a package:** AER articles with a package take about 6 months longer, but those published before 2019 did as well. Articles without a package include those exempt from the policy (no data or code) and those whose package was not matched.
+- **With versus without a package:** AER articles with a package take about 5½ months longer, and those published before 2019 did as well (the same gap, not significant on the smaller sample). Articles without a package include those exempt from the policy (no data or code) and those whose package was not matched.

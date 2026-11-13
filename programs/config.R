@@ -120,10 +120,31 @@ reg.pkg.firstyear <- 2010L
 # AER:Insights (first published 2019) has no years before the policy and is excluded from the
 # difference in differences (in the time-series specifications, its journal fixed effect absorbs it).
 reg.pkg.newly     <- c("AEA P&P","JEL","JEP")
+# Main analysis: the AER, AER:Insights and the AEJs (research journals with a data policy before 2019,
+# plus Insights). The P&P, JEL and JEP are reported separately (site appendix), with the
+# difference in differences that uses them as the treated group.
+main.journals     <- c("AER","AER:Insights","AEJ:Applied Economics","AEJ:Economic Policy","AEJ:Macro","AEJ:Micro")
+main.label        <- "Main journals"
 reg.pkg.excluded  <- c("AER:Insights")
 # Outputs
 reg.packages.csv  <- file.path(Outputs,"regressions_packages.csv")
 reg.ttp.csv     <- file.path(Outputs,"regressions_time_to_pub.csv")
+# Matched-window static regressions (robustness): the actual cutoff estimated on at most this many
+# years on each side of it (limited by the years available before the policy)
+reg.matched.max   <- 4L
+# Event studies (main specification): main journals with years before the policy (AER:Insights
+# excluded), years es.firstyear to the last complete year, year dummies relative to es.ref.
+# Trend variants: none; linear or quadratic journal trends in publication quarter fitted on
+# es.firstyear..es.ref and extrapolated; rolling: each year against the linear journal trends of the
+# es.roll years before it. Inference: bootstrap over issues within journal x year (es.boot draws).
+es.firstyear      <- 2015L
+es.ref            <- 2018L
+es.roll           <- 3L
+es.min.pre.years  <- 3L
+es.boot           <- 499L
+# cores for the bootstrap (forked; set ES_CORES to override)
+es.cores          <- as.integer(Sys.getenv("ES_CORES", max(1L, parallel::detectCores() - 2L)))
+es.csv            <- file.path(Outputs,"event_study.csv")
 # Kolmogorov-Smirnov tests of the time-to-publication distributions, with permutation p-values
 ttp.ks.permutations <- 10000L
 ttp.ks.csv       <- file.path(Outputs,"time_to_pub_ks.csv")

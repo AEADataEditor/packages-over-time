@@ -1,11 +1,12 @@
 ---
 title: "Data"
 page-layout: full
+toc: false
 resources:
   - data/articles.csv
 ---
 
-One row per research article in an AEA journal, 1999 to the latest Crossref data, with the flags used in the analysis and the DOIs of the article and of its replication packages. Search across all columns, filter, sort by clicking a column header, and download the full file or the rows you selected.
+One row per research article in an AEA journal (comments, replies and errata are excluded), 1999 to the latest Crossref data, with the flags used in the analysis and the DOIs of the article and of its replication packages. The most recent articles come first. Search across all columns, filter, sort by clicking a column header, scroll sideways for more columns, and download the full file or the rows you selected.
 
 ```{ojs}
 //| echo: false
@@ -13,13 +14,13 @@ articles = FileAttachment("data/articles.csv").csv({typed: true})
 journalOrder = ["AER","AER:Insights","AEA P&P","AEJ:Applied Economics","AEJ:Economic Policy",
                 "AEJ:Macro","AEJ:Micro","JEL","JEP"]
 years = d3.extent(articles, d => d.year)
-viewof dJournal = Inputs.select(["All journals", ...journalOrder.filter(j => articles.some(d => d.Journal === j))],
+viewof dJournal = Inputs.select(["All journals", "Main journals (AER, AER:Insights, AEJs)", ...journalOrder.filter(j => articles.some(d => d.Journal === j))],
                                 {label: "Journal", value: "All journals"})
 viewof dPackage = Inputs.radio(["All articles", "With a package", "Without a package"],
                                {label: "Package", value: "All articles"})
 viewof dFrom = Inputs.range(years, {label: "Published from", step: 1, value: years[0]})
 viewof dTo = Inputs.range(years, {label: "Published to", step: 1, value: years[1]})
-filtered = articles.filter(d => (dJournal === "All journals" || d.Journal === dJournal)
+filtered = articles.filter(d => (dJournal === "All journals" || d.Journal === dJournal || (dJournal.startsWith("Main") && d.main_journal))
   && (dPackage === "All articles" || d.has_package === (dPackage === "With a package"))
   && d.year >= dFrom && d.year <= dTo)
 viewof dSearch = Inputs.search(filtered, {placeholder: "Search titles, DOIs, …", label: "Search"})
@@ -30,6 +31,8 @@ viewof dAll = Inputs.toggle({label: "Show all columns", value: false})
 //| echo: false
 md`**${dSearch.length.toLocaleString()}** of ${articles.length.toLocaleString()} articles match.`
 ```
+
+::: {.column-screen-inset .data-wide}
 
 ```{ojs}
 //| echo: false
@@ -45,6 +48,12 @@ doiLink = (prefix) => v => {
   return span;
 }
 yn = v => v === true ? "yes" : v === false ? "no" : ""
+// display only: truncated title, full title on hover (downloads keep the full title)
+shortTitle = v => {
+  const t = String(v ?? ""), span = document.createElement("span");
+  span.title = t; span.textContent = t.length > 45 ? t.slice(0, 44) + "…" : t;
+  return span;
+}
 shortCols = ["doi", "title", "Journal", "year", "has_package", "package_dois", "under_policy",
              "in_pkg_regressions", "in_ttp_sample", "months_to_pub"]
 allCols = Object.keys(articles[0])
@@ -53,13 +62,18 @@ Inputs.table(dSearch, {
   header: {doi: "Article DOI", title: "Title", year: "Year", has_package: "Package",
            package_dois: "Package DOI(s)", under_policy: "Under policy", in_pkg_regressions: "In package regressions",
            in_ttp_sample: "In time-to-publication sample", months_to_pub: "Months to publication"},
-  format: {doi: doiLink(), package_dois: doiLink(), year: d => d, policy_year: d => d, sub_year: d => d ?? "",
+  format: {doi: doiLink(), title: shortTitle, package_dois: doiLink(), year: d => d, policy_year: d => d, sub_year: d => d ?? "",
            has_package: yn, under_policy: yn, in_pkg_regressions: yn, in_ttp_sample: yn,
-           pp_in_aer: yn, complete_year: yn},
-  width: {title: 280, doi: 190, package_dois: 150},
-  layout: "auto", rows: 25
+           pp_in_aer: yn, main_journal: yn, complete_year: yn},
+  width: {doi: 190, title: 260, Journal: 150, Journal_published: 150, year: 50, volume: 60, issue: 50, page: 80,
+          pp_in_aer: 70, policy_year: 70, under_policy: 70, has_package: 70, n_packages: 70, package_dois: 160,
+          package_sources: 170, complete_year: 70, in_pkg_regressions: 90, in_ttp_sample: 110, pub_month: 70,
+          sub_year: 70, sub_quarter: 70, months_to_pub: 90},
+  layout: "fixed", rows: 25
 })
 ```
+
+:::
 
 ```{ojs}
 //| echo: false
@@ -75,6 +89,7 @@ html`<p>${DOM.download(() => new Blob([d3.csvFormat(dSearch)], {type: "text/csv"
 | `doi` | DOI of the article |
 | `title` | Title (Crossref) |
 | `Journal` | Journal the article is attributed to. P&P articles printed in the May AER through 2017 are counted as AEA P&P. |
+| `main_journal` | The journal is in the main analysis (AER, AER:Insights, AEJs). The P&P, JEL and JEP are reported in the Appendix. |
 | `Journal_published` | Journal in which the article was printed (AER for those P&P articles) |
 | `year` | Year of print publication (from the volume for the AER, JEL and JEP) |
 | `volume`, `issue`, `page` | Volume, issue and pages (Crossref) |
@@ -86,7 +101,7 @@ html`<p>${DOM.download(() => new Blob([d3.csvFormat(dSearch)], {type: "text/csv"
 | `package_dois` | DOIs of the packages (openICPSR), separated by spaces. A migrated historical supplement whose openICPSR DOI is not recorded appears as `migration:<article DOI>` (none at present: all are also found with their DOI through DataCite or the title, which takes precedence). |
 | `package_sources` | How the packages were matched: `migration` (migrated historical supplement), `datacite` (DataCite link to the article), `reference` (cited in the article's reference list), `title` (deposit titled "Data and Code for: *article title*"); several joined by `+` |
 | `complete_year` | Publication year is complete. Only complete years enter the tables and figures. |
-| `in_pkg_regressions` | In the sample for the package regressions (complete years from 2010 on) |
+| `in_pkg_regressions` | In the sample for the package regressions (complete years from 2010 on): the pooled main analysis if `main_journal`, otherwise the Appendix regressions |
 | `in_ttp_sample` | In the time-to-publication sample (manuscript-number DOI; years with enough coverage) |
 | `pub_month` | Month of the print issue (time-to-publication sample) |
 | `sub_year`, `sub_quarter` | Submission year (from the DOI) and quarter (from the manuscript number) |

@@ -2,15 +2,15 @@
 title: "Replication packages by journal"
 ---
 
-Pick a journal to see the share of its research articles with a replication package, and the number of articles, by year of print publication. Dashed lines mark the policy changes: the AER data policy (2005), the launch of the AEJs (2009), and the AEA-wide policy (2019). The green background marks the years in which the selected journal was covered by a data policy.
+Pick a journal (the AER, AER:Insights, an AEJ, or the main journals pooled) to see the share of its research articles with a replication package, and the number of articles, by year of print publication. Dashed lines mark the policy changes: the AER data policy (2005), the launch of the AEJs (2009), and the AEA-wide policy (2019). The green background marks the years in which the selected journal was covered by a data policy. The P&P, JEL and JEP are on the [Appendix](appendix.qmd) page.
 
 ```{ojs}
 //| echo: false
 share = FileAttachment("data/share_by_journal_year.csv").csv({typed: true})
-order = ["All journals","AER","AER:Insights","AEA P&P","AEJ:Applied Economics","AEJ:Economic Policy",
-         "AEJ:Macro","AEJ:Micro","JEL","JEP"]
+order = ["Main journals","AER","AER:Insights","AEJ:Applied Economics","AEJ:Economic Policy",
+         "AEJ:Macro","AEJ:Micro"]
 journals = order.filter(j => share.some(d => d.Journal === j))
-viewof journal = Inputs.select(journals, {label: "Journal", value: "All journals"})
+viewof journal = Inputs.select(journals, {label: "Journal", value: "Main journals"})
 sel = share.filter(d => d.Journal === journal)
 policyYear = sel[0].policy_year
 lastYear = d3.max(share, d => d.year)
@@ -43,7 +43,7 @@ Plot.plot({
 //| echo: false
 html`<div class="fig-notes">
 <p>Blue line: share of research articles with at least one replication package.</p>
-<p>${journal === "All journals" ? "No green background for all journals, because journals came under a data policy in different years." : `Green background: years in which ${journal} was covered by a data and code availability policy (from ${policyYear}).`}</p>
+<p>${journal === "Main journals" ? "Main journals: AER, AER:Insights and AEJs pooled. No green background, because the journals came under a data policy in different years." : `Green background: years in which ${journal} was covered by a data and code availability policy (from ${policyYear}).`}</p>
 <p>Dashed vertical lines: 2005 (AER data policy), 2009 (AEJs launched), 2019 (AEA-wide policy).</p>
 <p>Research articles: Crossref, excluding front matter, book reviews, and editorial/administrative notes. P&P articles printed in the May AER through 2017 are counted as AEA P&P.</p>
 <p>Replication packages: AEA Data and Code Repository at openICPSR (DataCite links and titles, article references, migrated supplements).</p>

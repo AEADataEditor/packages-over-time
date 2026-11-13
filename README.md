@@ -12,7 +12,7 @@ Counts, by year of print publication, the research articles in AEA journals and 
 4. `04_combine.R`: restricts Crossref to research articles (dropping front matter, book reviews, and editorial/administrative items), matches packages to articles by migration mapping, DataCite link, reference list, or title, and tabulates by year and journal.
 5. `05_figures.R`: the figures.
 6. `06_time_to_pub.R`: the time from submission to publication, from manuscript-number DOIs (see below), also split by whether the article has a replication package.
-7. `07_regressions.R`: regressions of package presence and of the time to publication on the 2019 policy, with placebo implementation years (see below).
+7. `07_regressions.R`: event studies (main specification) and static regressions of package presence and of the time to publication on the 2019 policy, with placebo implementation years (see below). The event-study bootstrap uses all cores (`ES_CORES` to override); about 2 minutes on 24 cores.
 
 Settings (first and last year, whether to re-download) are in `programs/config.R`.
 
@@ -26,7 +26,7 @@ From the Crossref records, the following are removed:
 - JEL book reviews (DOIs ending in `.r1`, `.r2`, ...)
 - editorial and administrative content with authors, identified by title: forewords, editors' introductions and notes, reports of the editors, committees, treasurer, secretary, and Data Editor, minutes, auditor reports, corrigenda and errata, "Recommendations for Further Reading", and similar (the full list of patterns is in `04_combine.R`)
 
-Comments and replies are kept. Before 2018, the Papers and Proceedings were the May issue of the AER, and are counted as AER; since 2018, they are counted as AEA P&P.
+Comments, replies, rejoinders, errata and corrections are dropped (title patterns in `04_combine.R`; about 250 items, mostly AER comments and replies, JEP letters, and P&P discussants). Before 2018, the Papers and Proceedings were the May issue of the AER; they are counted as AEA P&P throughout.
 
 ## Replication packages (numerator)
 
@@ -39,7 +39,7 @@ A package is an openICPSR project (all versions and file-level DOIs of `10.3886/
 
 The `source` column in `outputs/packages_by_article.csv` records which methods matched each package.
 
-`articles_with_package` is what the figures plot. `packages` counts distinct openICPSR projects and can be slightly higher, because a few articles have several (for example, a comment and its reply, or a supplement re-deposited later). Figures cover `firstyear` through `lastyear` (the last complete year); the CSV files include the current, partial year.
+`articles_with_package` is what the figures plot. `packages` counts distinct openICPSR projects and can be slightly higher, because a few articles have several (for example, a supplement re-deposited later). Figures cover `firstyear` through `lastyear` (the last complete year); the CSV files include the current, partial year.
 
 ## Outputs
 
@@ -74,10 +74,16 @@ Before and after the 2019 AEA-wide policy is defined by **year of publication**:
 
 ## Regressions: did the 2019 policy change packages or the time to publication?
 
-`07_regressions.R` estimates OLS models with standard errors clustered by journal × year (CR1, t with G−1 df). It covers (a) whether a research article has a package (linear probability model, and a probit reporting the average effect on articles with the policy term = 1, with a cluster-robust delta-method SE; 2010 on, all journals) and (b) the months from submission to publication (articles in `time_to_pub_articles.csv`). *post* is 1 for articles **published** in the cutoff year or later (`Post^c = 1[publication year ≥ c]`); it does not depend on submission or acceptance dates. The equations, with all variables defined, are on the site's Data and methods page (`site/methods.qmd`).
+**Main specification: event study.** For the AER and AEJs (AER:Insights has no years before 2019), articles published 2015 to the last complete year: `y = a_j + f_j(quarter) + sum_{k != 2018} b_k 1(year = k)`. All main journals are treated in 2019, so year effects cannot be separated from the policy; `f_j` is none, a linear or quadratic journal trend in publication quarter fitted on 2015–2018 and extrapolated, or a rolling linear trend on the three years before each year. Confidence intervals: percentile bootstrap (499 draws) resampling issues within journal × year. Output: `outputs/event_study.csv`. Settings `es.*` in `config.R`.
+
+**Robustness: static regressions**, as below, including the actual cutoff on a matched window (the same number of years before and after 2019, at most 4; `reg.matched.max`).
+
+`07_regressions.R` estimates OLS models with standard errors clustered by journal × year (CR1, t with G−1 df). It covers (a) whether a research article has a package (linear probability model, and a probit reporting the average effect on articles with the policy term = 1, with a cluster-robust delta-method SE; 2010 on, all journals) and (b) the months from submission to publication (articles in `time_to_pub_articles.csv`). *post* is 1 for articles **published** in the cutoff year or later (`Post^c = 1[publication year ≥ c]`); it does not depend on submission or acceptance dates. The equations, with all variables defined, are on the site's Methods page (`site/methods.qmd`).
 
 - `its_fe`: *post* + journal fixed effects.
 - `its_trend`: adds a linear trend in publication quarter for each journal (Crossref print month), centered on the first quarter of the cutoff year.
+Pooled regressions (`its_fe`, `its_trend`, `pkg`) use the **main journals**: AER, AER:Insights and the AEJs (`main.journals` in `config.R`). The P&P, JEL and JEP are estimated one at a time and enter only the difference in differences; the site reports them on an Appendix page.
+
 - `did`, (a) only: *post* × *newly covered* + journal and year fixed effects. Newly covered: P&P, JEL, JEP, which had no policy before 2019. Comparison: AER and AEJs. AER:Insights is excluded.
 - `did_trend`, (a) only: adds a separate trend for each group.
 - `pkg`, (b) only: *post* × *has package* + journal fixed effects.

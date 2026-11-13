@@ -11,12 +11,13 @@ sgn <- function(x, d=1) ifelse(is.na(x), "–", sprintf(paste0("%+.", d, "f"), x
 ci  <- function(lo, hi, d=1) ifelse(is.na(lo), "–", paste0("[", num(lo, d), ", ", num(hi, d), "]"))
 pv  <- function(p) ifelse(is.na(p), "–", ifelse(p < 0.001, "< 0.001", sprintf("%.3f", p)))
 journal.order <- c("AER","AER:Insights","AEA P&P","AEJ:Applied Economics","AEJ:Economic Policy",
-                   "AEJ:Macro","AEJ:Micro","JEL","JEP","All journals")
+                   "AEJ:Macro","AEJ:Micro","JEL","JEP","Main journals","All journals")
 ```
 
 ## Methods in brief
 
-- **Articles:** research articles come from Crossref. Front matter, book reviews, and editorial and administrative items are dropped. Before 2018, the Papers and Proceedings (P&P) appeared as the May issue of the AER; here they are counted as AEA P&P.
+- **Journals:** the main analysis covers the AER, AER:Insights and the four AEJs ("main journals"). The AEA P&P, JEL and JEP are reported on the [Appendix](appendix.qmd) page.
+- **Articles:** research articles come from Crossref. Front matter, book reviews, editorial and administrative items, and comments, replies and errata are dropped. Before 2018, the Papers and Proceedings (P&P) appeared as the May issue of the AER; here they are counted as AEA P&P.
 - **Packages:** a package is an openICPSR project. It is matched to an article through the migration of historical supplements, a DataCite link, a citation in the article's reference list, or a deposit titled "Data and Code for: *article title*".
 - **Time from submission to publication:** the submission year and manuscript number come from manuscript-number DOIs (since 2015). The quartiles of the manuscript numbers give the submission quarter. Publication is the month of the print issue.
 - **Years:** unless stated otherwise, years are years of print publication. Tables cover complete years only.
@@ -24,20 +25,21 @@ journal.order <- c("AER","AER:Insights","AEA P&P","AEJ:Applied Economics","AEJ:E
 
 ## Replication packages
 
-**Table 1. Share of research articles with a replication package, by policy period**
+**Table 1. Share of research articles with a replication package, by policy period, main journals**
 
 ```{r}
-rd("packages_by_period.csv") %>%
+rd("packages_by_period_site.csv") %>% filter(!appendix) %>%
+  mutate(group=factor(group, levels=journal.order)) %>% arrange(group, period) %>%
   transmute(Group=group, Period=period, Years=paste0(first_year,"–",last_year),
             Articles=articles, `With a package`=articles_with_package, Share=pct(share)) %>%
   kable(align="lllrrr")
 ```
 
-**Table 2. Research articles with a replication package, by year, all AEA journals**
+**Table 2. Research articles with a replication package, by year, main journals (AER, AER:Insights, AEJs)**
 
 ```{r}
 rd("share_by_journal_year.csv") %>%
-  filter(Journal=="All journals") %>%
+  filter(Journal=="Main journals") %>%
   transmute(Year=as.character(year), Articles=articles, `With a package`=with_package, Share=pct(share)) %>%
   kable(align="lrrr")
 ```
@@ -90,7 +92,41 @@ rd("time_to_pub_ks.csv") %>%
 
 ## Policy regressions
 
-### Regression equations {#regression-equations}
+### Event study (main specification) {#event-study}
+
+For each outcome $y$, on articles in the AER and the four AEJs published 2015 to the latest complete year (AER:Insights has no years before 2019):
+
+$$y_{ijt} = \alpha_j + f_j(q_i) + \sum_{k \neq 2018} \beta_k \, \mathbb{1}(t = k) + \varepsilon_{ijt},$$
+
+with $q_i$ counted from the first quarter of 2019. All main journals are covered from 2019, so calendar-year effects cannot be estimated separately from $\beta_k$; instead, $f_j$ is one of:
+
+- **None:** $f_j = 0$. Estimated by OLS with journal fixed effects; $\beta_k$ is the within-journal mean in year $k$ minus the mean in 2018.
+- **Linear, quadratic:** $f_j(q) = \delta_j q$ or $\delta_j q + \gamma_j q^2$, estimated with $\alpha_j$ on the articles published 2015–2018 only, then extrapolated. $\beta_k$ is the mean of $y - \hat\alpha_j - \hat f_j(q_i)$ in year $k$ minus that in 2018.
+- **Rolling:** for each year $k$, $\alpha_j + \delta_j q$ is estimated on years $k-3$ to $k-1$, and $\beta_k$ is the mean of $y - \hat\alpha_j - \hat\delta_j q_i$ in year $k$. There is no reference year.
+
+A journal enters a trend version only with at least three years in the window used to fit the trend: for the time to publication, the AER (2018 only before the policy) is in the no-trend version only, and the rolling version starts in 2019. Confidence intervals are 2.5 and 97.5 percentiles of 499 bootstrap draws that resample journal issues within journal and year, re-estimating the trend in each draw; p-values are twice the share of draws on the other side of zero.
+
+**Table E1. Event study, main journals pooled**
+
+Each cell: estimate, then the 95% bootstrap confidence interval. Packages in percentage points, time to publication in months. – : reference year, or not estimated.
+
+```{r}
+es <- rd("event_study.csv")
+trend.lab <- c(none="No trend", linear="Linear trend", quadratic="Quadratic trend", rolling="Rolling trend")
+es %>% filter(Journal=="Main journals") %>%
+  mutate(scale=if_else(outcome=="has_package", 100, 1),
+         Outcome=if_else(outcome=="has_package", "Replication package (pp)", "Time to publication (months)"),
+         Trend=factor(trend.lab[trend], levels=trend.lab),
+         value=if_else(is.na(se) & trend != "rolling", "0 (ref.)",
+                       paste0(sgn(scale*estimate), ifelse(!is.na(p) & p < 0.05, "*", ""), " ", ci(scale*lo, scale*hi)))) %>%
+  select(Outcome, Trend, year, value) %>%
+  pivot_wider(names_from=year, values_from=value, values_fill="–") %>%
+  arrange(Outcome, Trend) %>%
+  select(Outcome, Trend, all_of(as.character(sort(unique(es$year))))) %>%
+  kable()
+```
+
+### Static regressions (robustness) {#regression-equations}
 
 All models are estimated by OLS at the article level. For (a), each model is also estimated as a probit (see below). Standard errors are clustered by journal × year of publication (CR1, with *G* − 1 degrees of freedom).
 
@@ -119,9 +155,9 @@ The coefficient reported for each model is $\beta$.
 
 | Label | Equation | Used for |
 |---|---|---|
-| Journal FE | (1) $\; y_{ijt} = \alpha_j + \beta\, \text{Post}^{c}_{t} + \varepsilon_{ijt}$ | (a), (b); all journals pooled |
-| Journal FE + journal quarterly trends | (2) $\; y_{ijt} = \alpha_j + \delta_j\,q_{i} + \beta\, \text{Post}^{c}_{t} + \varepsilon_{ijt}$ | (a), (b); all journals pooled |
-| DiD (year FE) | (3) $\; y_{ijt} = \alpha_j + \lambda_t + \beta\, (\text{Post}^{c}_{t} \times \text{New}_j) + \varepsilon_{ijt}$ | (a); pooled, AER:Insights excluded |
+| Journal FE | (1) $\; y_{ijt} = \alpha_j + \beta\, \text{Post}^{c}_{t} + \varepsilon_{ijt}$ | (a), (b); main journals pooled |
+| Journal FE + journal quarterly trends | (2) $\; y_{ijt} = \alpha_j + \delta_j\,q_{i} + \beta\, \text{Post}^{c}_{t} + \varepsilon_{ijt}$ | (a), (b); main journals pooled |
+| DiD (year FE) | (3) $\; y_{ijt} = \alpha_j + \lambda_t + \beta\, (\text{Post}^{c}_{t} \times \text{New}_j) + \varepsilon_{ijt}$ | (a); [Appendix](appendix.qmd): AER, AEJs, P&P, JEL, JEP |
 | DiD + group quarterly trends | (4) $\; y_{ijt} = \alpha_j + \lambda_t + \theta\, \text{New}_j\,q_{i} + \beta\, (\text{Post}^{c}_{t} \times \text{New}_j) + \varepsilon_{ijt}$ | (a); pooled, AER:Insights excluded |
 | Post × has package | (5) $\; \text{Months}_{i} = \alpha_j + \pi\, \text{Post}^{c}_{t} + \gamma\, \text{Pkg}_i + \beta\, (\text{Post}^{c}_{t} \times \text{Pkg}_i) + \varepsilon_{ijt}$ | (b); pooled |
 | Before/after (no trend) | (6) $\; y_{it} = \alpha + \beta\, \text{Post}^{c}_{t} + \varepsilon_{it}$ | (a), (b); one journal at a time |
@@ -141,9 +177,10 @@ where $D_i$ is the policy term ($\text{Post}^{c}_t$, or $\text{Post}^{c}_t \time
 
 **Samples.**
 - **Actual cutoff ($c = 2019$):** all years.
+- **Actual cutoff, matched window:** the same number of years before and after 2019: 2015–2022 for (a), 2016–2021 for (b) (the first year with submission dates; for the AER, 2018–2021).
 - **Placebo cutoffs $c = 2017, 2018$:** articles published before 2019 only.
 - **Placebo cutoffs $c = 2020, 2021$:** articles published in 2019 or later only.
-- **(a):** articles published 2010–2025, all journals.
+- **(a):** articles published 2010 to the latest complete year. Equations (1), (2), (6), (7): main journals (P&P, JEL and JEP in the Appendix). Equations (3), (4): AER, AEJs, P&P, JEL and JEP; AER:Insights, which has no years before 2019, is excluded.
 - **(b):** articles in the time-to-publication sample (AER, AER:Insights, AEJs; publication years in which submission quarters can be assigned, 2016–2024 depending on the journal).
 
 ```{r}
@@ -153,22 +190,25 @@ spec.single <- c(its_fe="(6) Before/after (no trend)", its_trend="(7) Before/aft
 cell <- function(est, lo, hi, p, scale=1)
   paste0(sgn(scale*est), ifelse(p < 0.05, "*", ""), " ", ci(scale*lo, scale*hi))
 pooled_table <- function(r, scale=1) {
-  r %>% filter(Journal=="All journals") %>%
+  r %>% filter(Journal=="Main journals") %>%
     mutate(Specification=factor(spec.labels[spec], levels=spec.labels),
            value=cell(estimate, lo, hi, p, scale)) %>%
-    select(any_of("method"), Specification, cutoff, value) %>%
-    pivot_wider(names_from=cutoff, values_from=value) %>%
+    mutate(col=if_else(type=="actual (matched window)", "2019m", as.character(cutoff))) %>%
+    select(any_of("method"), Specification, col, value) %>%
+    pivot_wider(names_from=col, values_from=value) %>%
     arrange(across(any_of("method")), Specification) %>%
-    select(any_of(c(Method="method")), Specification, `2017`, `2018`, `2019`, `2020`, `2021`) %>%
-    rename_with(~ paste0("Published ≥ ", .x, ifelse(.x == "2019", " (actual)", " (placebo)")), matches("^20"))
+    select(any_of(c(Method="method")), Specification, `2017`, `2018`, `2019`, `2019m`, `2020`, `2021`) %>%
+    rename(`Published ≥ 2017 (placebo)`=`2017`, `Published ≥ 2018 (placebo)`=`2018`,
+           `Published ≥ 2019 (actual)`=`2019`, `Published ≥ 2019 (actual, matched window)`=`2019m`,
+           `Published ≥ 2020 (placebo)`=`2020`, `Published ≥ 2021 (placebo)`=`2021`)
 }
 journal_table <- function(r, scale=1) {
-  r %>% filter(Journal!="All journals") %>%
+  r %>% filter(Journal %in% journal.order[1:7], !Journal %in% c("AEA P&P","JEL","JEP")) %>%
     mutate(Journal=factor(Journal, levels=journal.order),
            Specification=factor(spec.single[spec], levels=spec.single)) %>%
     arrange(across(any_of("method")), Journal, Specification, cutoff) %>%
     transmute(across(any_of(c(Method="method"))), Journal, Specification,
-              `Cutoff c (published ≥ c)`=paste0(cutoff, ifelse(type=="actual", " (actual)", " (placebo)")),
+              `Cutoff c (published ≥ c)`=paste0(cutoff, case_when(type=="actual" ~ " (actual)", type=="actual (matched window)" ~ " (actual, matched window)", TRUE ~ " (placebo)")),
               Sample=paste0(first_year, "–", last_year), n, Clusters=n_clusters,
               `Mean before`=num(scale*mean_pre), Estimate=sgn(scale*estimate),
               `95% CI`=ci(scale*lo, scale*hi), p=pv(p))
@@ -177,15 +217,15 @@ reg.pkg   <- rd("regressions_packages.csv") %>% mutate(method=if_else(method=="P
 reg.delay <- rd("regressions_time_to_pub.csv") %>% select(-method)
 ```
 
-**Table 7. Replication package, all journals pooled (percentage points)**
+**Table 7. Replication package, main journals pooled (percentage points)**
 
-Linear probability model: coefficient $\beta$ from equations (1)–(4). Probit: average effect $\hat\Delta$ from the probit versions of the same equations. Columns are the cutoff $c$: $\text{Post}^{c}_t = 1$ for articles published in year $c$ or later. $c = 2019$ is the actual policy; the other columns are placebos. Each cell shows the estimate, then the 95% confidence interval. \* marks p < 0.05.
+Linear probability model: coefficient $\beta$ from equations (1) and (2) (the difference in differences, (3) and (4), is in Table A2 on the [Appendix](appendix.qmd)). Probit: average effect $\hat\Delta$ from the probit versions of the same equations. Columns are the cutoff $c$: $\text{Post}^{c}_t = 1$ for articles published in year $c$ or later. $c = 2019$ is the actual policy; the other columns are placebos. Each cell shows the estimate, then the 95% confidence interval. \* marks p < 0.05.
 
 ```{r}
 kable(pooled_table(reg.pkg, scale=100))
 ```
 
-**Table 8. Time from submission to publication, all journals pooled (months)**
+**Table 8. Time from submission to publication, main journals pooled (months)**
 
 Coefficient $\beta$ from equations (1), (2) and (5); otherwise as Table 7.
 
@@ -193,7 +233,7 @@ Coefficient $\beta$ from equations (1), (2) and (5); otherwise as Table 7.
 kable(pooled_table(reg.delay))
 ```
 
-**Table 9. Replication package, by journal (percentage points)**
+**Table 9. Replication package, by journal, main journals (percentage points)**
 
 ::: {.callout-note collapse="true" appearance="minimal"}
 ## Show Table 9

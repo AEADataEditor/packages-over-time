@@ -340,7 +340,7 @@ filter: removed 35 rows (50%), 35 rows remaining
 > 
 > article.db <- read_csv(article.db.csv,show_col_types=FALSE) %>%
 +   filter(between(year,firstyear,lastyear))
-filter: removed 479 rows (4%), 10,855 rows remaining
+filter: removed 477 rows (4%), 10,609 rows remaining
 > 
 > # df: articles; lines: named years where a policy took effect (dashed vertical lines).
 > # Red horizontal lines: share with a package, pooled within the periods the lines define.
@@ -382,7 +382,7 @@ filter: removed 479 rows (4%), 10,855 rows remaining
 +           subtitle="AER excluding the P&P printed in the May issue (through 2017).",
 +           note=red.note,
 +           file="figure_share_aer") -> fig.share.aer
-filter: removed 7,828 rows (72%), 3,027 rows remaining
+filter: removed 7,795 rows (73%), 2,814 rows remaining
 group_by: one grouping variable (year)
 summarize: now 27 rows and 2 columns, ungrouped
 mutate: converted 'period' from character to integer (0 new NA)
@@ -395,7 +395,7 @@ summarize: now 4 rows and 4 columns, ungrouped
 +           subtitle="AEJ: Applied, Policy, Macro, and Micro. Data policy in force since their creation in 2009.",
 +           note=red.note,
 +           file="figure_share_aej") -> fig.share.aej
-filter: removed 7,939 rows (73%), 2,916 rows remaining
+filter: removed 7,705 rows (73%), 2,904 rows remaining
 group_by: one grouping variable (year)
 summarize: now 17 rows and 2 columns, ungrouped
 mutate: converted 'period' from character to integer (0 new NA)
@@ -408,7 +408,7 @@ summarize: now 2 rows and 4 columns, ungrouped
 +           subtitle="Journals other than the AER, AEJs, and P&P. No data policy before 2019 (AER:Insights began in 2019).",
 +           note=red.note,
 +           file="figure_share_others") -> fig.share.others
-filter: removed 8,761 rows (81%), 2,094 rows remaining
+filter: removed 8,533 rows (80%), 2,076 rows remaining
 group_by: one grouping variable (year)
 summarize: now 27 rows and 2 columns, ungrouped
 mutate: converted 'period' from character to integer (0 new NA)
@@ -421,7 +421,7 @@ summarize: now 4 rows and 4 columns, ungrouped
 +           subtitle="Includes the P&P printed as the May AER through 2017. Not covered by a data policy before 2019.",
 +           note=red.note,
 +           file="figure_share_pp") -> fig.share.pp
-filter: removed 8,037 rows (74%), 2,818 rows remaining
+filter: removed 7,794 rows (73%), 2,815 rows remaining
 group_by: one grouping variable (year)
 summarize: now 27 rows and 2 columns, ungrouped
 mutate: converted 'period' from character to integer (0 new NA)
@@ -430,4 +430,4 @@ summarize: now 4 rows and 4 columns, ungrouped
 > 
 > proc.time()
    user  system elapsed 
- 10.198   0.872  10.139 
+ 10.099   0.746   9.914 
